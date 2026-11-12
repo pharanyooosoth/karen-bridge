@@ -25,3 +25,11 @@ test('Common water entry has a Thai reading and dictionary remains unchanged',()
  assert.deepEqual(thaiReading(entry).readings,['ที']);
  assert.equal(JSON.stringify(entry),before);
 });
+
+test('Every displayed Thai reading can find its source dictionary entry',async()=>{
+ const {buildIndex,search}=await import('../engine.js');const index=buildIndex(entries);
+ for(const entry of entries)for(const reading of thaiReading(entry).readings){
+  const result=search(index,reading,'thai-reading',{limit:entries.length});
+  assert.ok(result.matches.some(m=>m.exact&&m.entry.id===entry.id),`${reading}: ${entry.id}`);
+ }
+});

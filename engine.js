@@ -1,19 +1,24 @@
+import {thaiReading} from './thai-reading.js';
 export function normalize(text) {
   return String(text).normalize('NFC').replace(/[\u200B-\u200D\uFEFF]/gu, '').trim().toLocaleLowerCase('en').replace(/\s+/gu, ' ');
 }
 export function glossKey(text) {
   return normalize(text).replace(/[.!?。။]+$/u, '').replace(/^(to |a |an |the )/u, '');
 }
+// Ignore syllable separators, but retain Thai vowels and tone marks.
+function thaiReadingKey(text){return normalize(text).replace(/[\s\-‐‑–—]+/gu,'');}
 export function buildIndex(entries) {
   return entries.map(entry => ({entry, keys:{
     ksw:[normalize(entry.word)],
     en:entry.senses.flatMap(s=>s.en.flatMap(g=>[normalize(g),glossKey(g)])),
     th:entry.senses.flatMap(s=>s.th.flatMap(g=>g.split(';').map(normalize))),
-    roman:entry.roman.map(normalize)
+    roman:entry.roman.map(normalize),
+    'thai-reading':thaiReading(entry).readings.map(thaiReadingKey)
   }}));
 }
 export function search(index, query, language='th', {audioOnly=false, limit=40}={}) {
-  const q=normalize(query).replace(/[!?。။]+$/u,'');
+  const cleaned=normalize(query).replace(/[!?。။]+$/u,'');
+  const q=language==='thai-reading'?thaiReadingKey(cleaned):cleaned;
   if (!q) return {matches:[],total:0,exact:0};
   const matches=[];
   for(const row of index){

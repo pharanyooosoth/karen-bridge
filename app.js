@@ -6,7 +6,7 @@ let data,index,limit=40,currentView='translate',recognition=null,playing=null;
 const KEY='karen-bridge:saved:v1';
 let saved=[];
 try{const value=JSON.parse(localStorage.getItem(KEY)||'[]');saved=Array.isArray(value)?value.filter(x=>typeof x==='string'):[];}catch{}
-const labels={th:'ไทย',en:'English',ksw:'กะเหรี่ยงสะกอ',roman:'คำอ่านโรมัน'};
+const labels={th:'ไทย',en:'English',ksw:'กะเหรี่ยงสะกอ',roman:'คำอ่านโรมัน','thai-reading':'คำอ่านภาษาไทย'};
 function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
 function link(text,url,cls){const a=el('a',cls,text);a.href=url;a.target='_blank';a.rel='noopener noreferrer';return a;}
 function toast(message){$('toast').textContent=message;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').textContent='',3300);}
@@ -39,14 +39,15 @@ function render(){
  if(!index)return;
  const query=$('query').value,language=$('language').value;
  $('char-count').textContent=`${query.length} / 500`;
- $('result-language').textContent=language==='ksw'?'ไทย / English':'กะเหรี่ยงสะกอ';
+ $('result-language').textContent=['ksw','thai-reading'].includes(language)?'ไทย / English':'กะเหรี่ยงสะกอ';
  $('segments').replaceChildren();$('load-more').hidden=true;
  if(!query.trim()){$('result-summary').textContent='พร้อมค้นคำจากพจนานุกรม';const empty=el('div','empty');const sample=el('span','','ထံ');sample.lang='ksw';empty.append(sample,el('h3','','คำใหม่ เริ่มต้นได้ที่นี่'),el('p','','พิมพ์คำ หรือเลือกคำแนะนำด้านล่าง'));$('results').replaceChildren(empty);return;}
  const result=search(index,query,language,{audioOnly:$('audio-only').checked,limit});
  $('result-summary').textContent=result.total?`${result.exact?'พบคำตรงกัน '+result.exact+' รายการ':'คำที่เกี่ยวข้อง — ไม่ใช่คำแปลตรงตัว'} · ทั้งหมด ${result.total} รายการ`:'ไม่พบคำนี้ในชุดข้อมูลปัจจุบัน';
- $('results').replaceChildren(...result.matches.map(m=>entryCard(m.entry,m.exact?'คำตรงกัน':'คำที่เกี่ยวข้อง · ไม่ใช่คำแปลตรงตัว')));
+ if(language==='thai-reading')$('result-summary').textContent=result.total?`${result.exact?'พบคำอ่านตรงกัน '+result.exact+' รายการ':'พบคำอ่านบางส่วน'} · ทั้งหมด ${result.total} รายการ · คำอ่านโดยประมาณอาจตรงหลายคำ`:'ไม่พบคำอ่านนี้ในชุดข้อมูลปัจจุบัน';
+ $('results').replaceChildren(...result.matches.map(m=>entryCard(m.entry,language==='thai-reading'?(m.exact?'คำอ่านตรงกัน · โดยประมาณ':'คำอ่านตรงบางส่วน · ไม่ใช่คำแปลตรงตัว'):(m.exact?'คำตรงกัน':'คำที่เกี่ยวข้อง · ไม่ใช่คำแปลตรงตัว'))));
  $('load-more').hidden=result.total<=result.matches.length;
- if(!result.total){const empty=el('div','empty');empty.append(el('h3','','ลองคำสั้นลง หรือเปลี่ยนภาษา'),el('p','',language==='th'?'คำไทยครอบคลุมเพียงบางรายการ ลองค้นภาษาอังกฤษของคำเดียวกัน':'ระบบจะไม่เดาคำแปลเมื่อไม่มีข้อมูล'));$('results').append(empty);}
+ if(!result.total){const empty=el('div','empty');empty.append(el('h3','','ลองคำสั้นลง หรือเปลี่ยนภาษา'),el('p','',language==='thai-reading'?'ยังไม่มีคำอ่านรูปแบบนี้ ลองการสะกดอีกแบบ หรือค้นด้วยความหมายไทย/อังกฤษ':language==='th'?'คำไทยครอบคลุมเพียงบางรายการ ลองค้นภาษาอังกฤษของคำเดียวกัน':'ระบบจะไม่เดาคำแปลเมื่อไม่มีข้อมูล'));$('results').append(empty);}
  if(language==='ksw'&&!result.exact&&query.trim()){
   const parts=segmentKaren(index,query);const box=el('div','segment-box');box.append(el('p','','แยกคำเพื่อช่วยอ่าน (อาจแบ่งผิด) · ไม่ใช่คำแปลทั้งประโยค'));
   for(const part of parts){if(part.known){const b=el('button','',part.text);b.onclick=()=>{$('query').value=part.text;limit=40;render();};box.append(b);}else box.append(el('span','unknown',part.text+' · ไม่รู้จัก'));} $('segments').append(box);
@@ -54,13 +55,13 @@ function render(){
 }
 function renderSaved(){if(!data)return;const entries=data.entries.filter(e=>saved.includes(e.id));$('saved-list').replaceChildren(...entries.map(e=>entryCard(e)));if(!entries.length)$('saved-list').append(el('p','intro','ยังไม่มีคำที่บันทึก กด ☆ ข้างคำที่อยากทบทวน'));$('export-saved').disabled=!entries.length;}
 function view(name){currentView=name;document.querySelectorAll('.view').forEach(n=>n.hidden=n.id!==`view-${name}`);document.querySelectorAll('.nav-item').forEach(n=>{n.classList.toggle('active',n.dataset.view===name);if(n.dataset.view===name)n.setAttribute('aria-current','page');else n.removeAttribute('aria-current');});if(name==='saved')renderSaved();}
-function updateLanguage(){if(recognition)recognition.abort();$('query').lang=$('language').value==='ksw'?'ksw':$('language').value==='th'?'th':'en';$('query').placeholder={th:'พิมพ์คำที่อยากรู้ เช่น น้ำ ขอบคุณ…',en:'Type a word, e.g. water, thank you…',ksw:'พิมพ์หรือวางอักษรกะเหรี่ยง เช่น ထံ',roman:'พิมพ์คำอ่านโรมันตามต้นฉบับ เช่น hṭee'}[$('language').value];const supported=Boolean(window.SpeechRecognition||window.webkitSpeechRecognition);$('mic').disabled=!supported||!['th','en'].includes($('language').value);$('speech-status').textContent=!supported?'เบราว์เซอร์นี้ไม่รองรับรับเสียง กรุณาพิมพ์ข้อความ':!['th','en'].includes($('language').value)?'รับเสียงได้เฉพาะไทยและอังกฤษ กรุณาพิมพ์ภาษากะเหรี่ยง':'การใช้ไมค์อาจส่งเสียงไปยังบริการรู้จำเสียงของเบราว์เซอร์';limit=40;render();}
+function updateLanguage(){$('reading-help').hidden=$('language').value!=='thai-reading';if(recognition)recognition.abort();$('query').lang=$('language').value==='ksw'?'ksw':['th','thai-reading'].includes($('language').value)?'th':'en';$('query').placeholder={th:'พิมพ์คำที่อยากรู้ เช่น น้ำ ขอบคุณ…',en:'Type a word, e.g. water, thank you…',ksw:'พิมพ์หรือวางอักษรกะเหรี่ยง เช่น ထံ',roman:'พิมพ์คำอ่านโรมันตามต้นฉบับ เช่น hṭee','thai-reading':'พิมพ์คำอ่านภาษาไทย เช่น ที ตาบลึ ตะบลือ…'}[$('language').value];const supported=Boolean(window.SpeechRecognition||window.webkitSpeechRecognition);$('mic').disabled=!supported||!['th','en'].includes($('language').value);$('speech-status').textContent=$('language').value==='thai-reading'?'พิมพ์คำอ่านภาษาไทยเพื่อค้นเสียงกะเหรี่ยงในพจนานุกรม':!supported?'เบราว์เซอร์นี้ไม่รองรับรับเสียง กรุณาพิมพ์ข้อความ':!['th','en'].includes($('language').value)?'รับเสียงได้เฉพาะไทยและอังกฤษ กรุณาพิมพ์ภาษากะเหรี่ยง':'การใช้ไมค์อาจส่งเสียงไปยังบริการรู้จำเสียงของเบราว์เซอร์';limit=40;render();}
 $('query').oninput=()=>{limit=40;render();};$('query').onkeydown=e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();render();}};
 $('search').onclick=()=>render();$('language').onchange=updateLanguage;$('audio-only').onchange=()=>{limit=40;render();};
 $('clear').onclick=()=>{$('query').value='';render();$('query').focus();};
 $('swap').onclick=()=>{const old=$('language').value;if(old==='ksw'){$('language').value='en';$('query').value='';}else{const result=index?search(index,$('query').value,old):null;$('language').value='ksw';$('query').value=result?.matches.find(m=>m.exact)?.entry.word||'';}updateLanguage();};
 $('load-more').onclick=()=>{limit+=40;render();};
-for(const button of document.querySelectorAll('[data-query]'))button.onclick=()=>{$('language').value='th';$('query').value=button.dataset.query;$('audio-only').checked=false;updateLanguage();};
+for(const button of document.querySelectorAll('[data-query]'))button.onclick=()=>{$('language').value=button.dataset.language||'th';$('query').value=button.dataset.query;$('audio-only').checked=false;updateLanguage();};
 for(const button of document.querySelectorAll('[data-view]'))button.onclick=()=>view(button.dataset.view);
 $('export-saved').onclick=()=>{const entries=data.entries.filter(e=>saved.includes(e.id));const blob=new Blob([JSON.stringify({license:'CC BY-SA 4.0',attribution:'Wiktionary contributors via Kaikki; Thai drafts and approximate reading aids by Karen Bridge',entries:entries.map(entry=>({...entry,thaiReading:thaiReading(entry)}))},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=el('a');a.href=url;a.download='karen-bridge-saved.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 $('mic').onclick=()=>{
