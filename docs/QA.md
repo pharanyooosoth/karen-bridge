@@ -31,3 +31,9 @@ Browser check (2026-11-12): unconfigured API correctly disables AI buttons; edit
 ## Thai-reading reverse lookup (v1.3)
 
 Tests cover ที → ထံ → น้ำ/water; both user-provided thank-you spellings; optional spaces and hyphens; preserving Thai tone marks; every available reading round-tripping to its source entry; homophones, exact-before-partial ranking, audio filters, and no fabricated results for unknown readings. Thai-meaning and romanization search remain separate modes.
+
+## Reference-assisted reading (v1.4)
+
+Mock-provider tests verify explicit language/dialect/reference forwarding, separate target/reference image roles, dictionary context and source links, reference precedence, no Sgaw dictionary substitution for Burmese, withholding unsupported readings, rejection of dotted-circle OCR guesses, and empty translation in reading-only mode. This does not establish linguistic accuracy. User-reported failures involve tiny crops from a month chart; retest with full chart as reference and verify row alignment with a speaker. No real credentials are needed by tests.
+
+2026-11-12: all 32 automated tests and the static build pass. Browser check against a local mock confirmed the Thai Sgaw default, reading-only mode, လါ → ลา from the project dictionary with an approximation label, and withholding that Sgaw reading when Burmese is selected. No live OpenAI request was made in this check. The user identifies the chart as Sgaw Karen in Thailand; this context is now the default dialect hint, not a claim of independently verified pronunciation.

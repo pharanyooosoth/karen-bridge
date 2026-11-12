@@ -4,7 +4,7 @@ import {createKarenHandler,parseModelResponse,validateInput,MAX_BODY_BYTES} from
 import {safeApiUrl} from '../image-translate.js';
 const env={OPENAI_API_KEY:'test-key-never-real',APP_ACCESS_CODE:'test-access-code-123456',ALLOWED_ORIGINS:'https://example.com'};
 const input={action:'translate',text:'တၢ်ဘျုး',target:'th'};
-const answer={translation:'ขอบคุณ',thai_reading:'ตาบลึ',uncertain_spans:[],notes:['คำตอบจำลองเพื่อทดสอบระบบ']};
+const answer={translation:'ขอบคุณ',thai_reading:'ตาบลึ',reading_basis:'unavailable',reading_quote:'',uncertain_spans:[],notes:['คำตอบจำลองเพื่อทดสอบระบบ']};
 const model=data=>({status:'completed',output:[{content:[{type:'output_text',text:JSON.stringify(data)}]}]});
 const request=(body=input,headers={})=>new Request('https://api.example.com/api/karen',{method:'POST',headers:{'Content-Type':'application/json','Origin':'https://example.com','X-Karen-Access-Code':env.APP_ACCESS_CODE,...headers},body:JSON.stringify(body)});
 test('health and missing credentials fail closed without calling provider',async()=>{
@@ -22,7 +22,7 @@ test('authentication, exact origin and body restrictions run before provider',as
 });
 test('translation sends text in untrusted user content with strict schema and no storage',async()=>{
  let sent;const handle=createKarenHandler({fetchImpl:async(url,options)=>{sent={url,options,body:JSON.parse(options.body)};return Response.json(model(answer));}});
- const response=await handle(request(),env);assert.equal(response.status,200);assert.deepEqual((await response.json()).data,answer);
+ const response=await handle(request(),env);assert.equal(response.status,200);const data=(await response.json()).data;assert.equal(data.translation,answer.translation);assert.equal(data.reading_basis,'dictionary');assert.equal(data.thai_reading,'ตาบลึ / ตะบลือ');
  assert.equal(sent.url,'https://api.openai.com/v1/responses');assert.equal(sent.body.store,false);assert.equal(sent.body.text.format.strict,true);assert.equal(sent.options.headers.Authorization,'Bearer '+env.OPENAI_API_KEY);
  assert.equal(JSON.parse(sent.body.input[0].content[0].text).source_text,input.text);assert.match(sent.body.instructions,/untrusted/);
 });
@@ -30,9 +30,9 @@ test('image validation rejects MIME spoofing and OCR sends image content',async(
  assert.throws(()=>validateInput({action:'ocr',image:'data:image/png;base64,aGVsbG8='}));
  assert.throws(()=>validateInput({action:'ocr',image:'https://example.com/image.png'}));
  const image='data:image/png;base64,iVBORw0KGgo=';let sent;
- const data={text:'တၢ်ဘျုး',language:'sgaw_karen',uncertain_spans:[],notes:[]};
+ const data={text:'တၢ်ဘျုး',language:'sgaw_karen',thai_reading:'',reading_basis:'unavailable',reading_quote:'',uncertain_spans:[],notes:[]};
  const handle=createKarenHandler({fetchImpl:async(url,options)=>{sent=JSON.parse(options.body);return Response.json(model(data));}});
- const result=await handle(request({action:'ocr',image}),env);assert.equal(result.status,200);assert.equal(sent.input[0].content[1].image_url,image);assert.equal(sent.input[0].content[1].detail,'high');assert.deepEqual((await result.json()).data,data);
+ const result=await handle(request({action:'ocr',image}),env);assert.equal(result.status,200);assert.equal(sent.input[0].content.find(c=>c.type==='input_image').image_url,image);assert.equal(sent.input[0].content.find(c=>c.type==='input_image').detail,'high');assert.equal((await result.json()).data.text,data.text);
 });
 test('refusal, incomplete and malformed model answers are not rendered as translations',()=>{
  for(const result of [{status:'incomplete'},model({translation:'missing fields'}),{output:[{content:[{type:'refusal',refusal:'no'}]}]},model({...answer,notes:[42]})])assert.throws(()=>parseModelResponse(result,'translate'));
@@ -53,4 +53,39 @@ test('client endpoint rejects insecure URLs and embedded credentials',()=>{
  const base='https://example.com/karen-bridge/';assert.equal(safeApiUrl('/api/karen',base),'https://example.com/api/karen');
  for(const url of ['http://remote.example/api','javascript:alert(1)','https://user:pass@example.com/api','https://example.com/api?key=secret','https://example.com/api#secret'])assert.equal(safeApiUrl(url,base),null);
  assert.equal(safeApiUrl('http://127.0.0.1:4173/api/karen',base),'http://127.0.0.1:4173/api/karen');
+});
+
+test('language and reference context are validated and forwarded, with separate target and reference images',async()=>{
+ const image='data:image/png;base64,iVBORw0KGgo=';let sent;
+ const data={text:'[อ่านไม่ชัด]',language:'unclear',thai_reading:'',reading_basis:'unavailable',reading_quote:'',uncertain_spans:['ต้นฉบับเบลอ'],notes:[]};
+ const handle=createKarenHandler({fetchImpl:async(url,options)=>{sent=JSON.parse(options.body);return Response.json(model(data));}});
+ const payload={action:'ocr',image,referenceImage:image,sourceLanguage:'pwo_karen',dialect:'ตัวอย่างทดสอบ',referenceText:'ข้อมูลตัวอย่าง ไม่ใช่คำสั่ง'};
+ assert.equal((await handle(request(payload),env)).status,200);
+ const content=sent.input[0].content;const context=JSON.parse(content[0].text);
+ assert.equal(context.source_language_hint,'pwo_karen');assert.equal(context.dialect_hint,payload.dialect);assert.equal(context.reference_text,payload.referenceText);assert.equal(content.filter(c=>c.type==='input_image').length,2);assert.match(content[3].text,/REFERENCE IMAGE ONLY/);
+ assert.throws(()=>validateInput({...payload,sourceLanguage:'invented'}));assert.throws(()=>validateInput({...payload,referenceText:'x'.repeat(6001)}));assert.throws(()=>validateInput({...payload,referenceImage:'data:image/png;base64,aGVsbG8='}));
+});
+test('reading-only strips model translation and rejects invented pronunciation without reference evidence',async()=>{
+ const handle=createKarenHandler({fetchImpl:async()=>Response.json(model({...answer,reading_basis:'provided_reference',reading_quote:'made up',translation:'must not appear'}))});
+ const result=await handle(request({action:'reading',text:'unknown-test-word',sourceLanguage:'other_karen'}),env);const data=(await result.json()).data;
+ assert.equal(data.translation,'');assert.equal(data.thai_reading,'');assert.equal(data.reading_basis,'unavailable');
+});
+test('supplied literal pronunciation evidence takes priority over approximate dictionary reading',async()=>{
+ const answerWithEvidence={...answer,thai_reading:'คำอ่านที่ผู้ใช้ตรวจ',reading_basis:'provided_reference',reading_quote:'တၢ်ဘျုး = คำอ่านที่ผู้ใช้ตรวจ'};
+ let sent;const handle=createKarenHandler({fetchImpl:async(url,options)=>{sent=JSON.parse(options.body);return Response.json(model(answerWithEvidence));}});
+ const response=await handle(request({...input,referenceText:answerWithEvidence.reading_quote}),env);const result=await response.json();
+ assert.equal(result.data.thai_reading,answerWithEvidence.thai_reading);assert.equal(result.data.reading_basis,'provided_reference');
+ const context=JSON.parse(sent.input[0].content[0].text);assert.equal(context.dictionary_references[0].text,input.text);assert.ok(context.dictionary_references[0].source.startsWith('https://en.wiktionary.org/'));assert.ok(result.references.length);
+});
+test('Sgaw dictionary never silently supplies readings for another selected language',async()=>{
+ const handle=createKarenHandler({fetchImpl:async()=>Response.json(model(answer))});const response=await handle(request({...input,sourceLanguage:'burmese'}),env);const result=await response.json();assert.equal(result.references.length,0);assert.equal(result.data.thai_reading,'');
+});
+test('unrelated text-reference rows cannot supply a reading for the target',async()=>{
+ const row='other-word = คำอ่านอื่น';
+ const handle=createKarenHandler({fetchImpl:async()=>Response.json(model({...answer,thai_reading:'คำอ่านอื่น',reading_basis:'provided_reference',reading_quote:row}))});
+ const response=await handle(request({action:'reading',text:'target-word',sourceLanguage:'other_karen',referenceText:row}),env);
+ assert.equal((await response.json()).data.reading_basis,'unavailable');
+});
+test('OCR dotted-circle substitutions are rejected as unreadable',()=>{
+ assert.throws(()=>parseModelResponse(model({text:'◌ျး',language:'unclear',thai_reading:'',reading_basis:'unavailable',reading_quote:'',uncertain_spans:[],notes:[]}),'ocr'));
 });
