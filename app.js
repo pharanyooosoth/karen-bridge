@@ -1,4 +1,5 @@
 import {buildIndex,search,segmentKaren} from './engine.js';
+import {thaiReading} from './thai-reading.js';
 const $=id=>document.getElementById(id);
 let data,index,limit=40,currentView='translate',recognition=null,playing=null;
 const KEY='karen-bridge:saved:v1';
@@ -15,6 +16,15 @@ function entryCard(entry,matchType){
  if(matchType)card.append(el('span','match-label',matchType));
  const top=el('div','entry-top');const title=el('div');title.append(el('div','pos',entry.pos+' · S’gaw Karen'));const word=el('h3','karen',entry.word);word.lang='ksw';title.append(word);top.append(title);
  const star=el('button','save',saved.includes(entry.id)?'★':'☆');star.setAttribute('aria-label',`${saved.includes(entry.id)?'เลิกบันทึก':'บันทึก'} ${entry.word}`);star.setAttribute('aria-pressed',saved.includes(entry.id));star.onclick=()=>saveEntry(entry.id);top.append(star);card.append(top);
+ const reading=thaiReading(entry);
+ const thaiBox=el('div','thai-reading');
+ thaiBox.append(el('div','thai-reading-label','คำอ่านภาษาไทยโดยประมาณ'));
+ if(reading.readings.length){
+  thaiBox.append(el('div','thai-reading-text',reading.readings.join(' / ')));
+  thaiBox.append(el('div','thai-reading-note',reading.method==='user-example'?'ตัวอย่างคำอ่านที่ผู้ใช้เสนอ · ยังไม่ได้ตรวจโดยเจ้าของภาษา':'ถอดจากคำอ่านโรมันอัตโนมัติ · ยังไม่ได้ตรวจโดยเจ้าของภาษา'));
+  thaiBox.append(el('div','thai-reading-note','เสียงและวรรณยุกต์อาจไม่ตรงกับสำเนียงของคุณ'));
+ }else thaiBox.append(el('div','small','ยังไม่มีคำอ่านไทยสำหรับรูปแบบนี้'));
+ card.append(thaiBox);
  if(entry.roman.length)card.append(el('div','roman','คำอ่านโรมัน · '+entry.roman.join(' / ')));
  else card.append(el('div','small','ต้นฉบับไม่มีคำอ่านโรมัน'));
  for(const ipa of entry.ipa)card.append(el('div','ipa',`IPA ${ipa.text}${ipa.note?' · '+ipa.note:''}`));
@@ -51,7 +61,7 @@ $('swap').onclick=()=>{const old=$('language').value;if(old==='ksw'){$('language
 $('load-more').onclick=()=>{limit+=40;render();};
 for(const button of document.querySelectorAll('[data-query]'))button.onclick=()=>{$('language').value='th';$('query').value=button.dataset.query;$('audio-only').checked=false;updateLanguage();};
 for(const button of document.querySelectorAll('[data-view]'))button.onclick=()=>view(button.dataset.view);
-$('export-saved').onclick=()=>{const entries=data.entries.filter(e=>saved.includes(e.id));const blob=new Blob([JSON.stringify({license:'CC BY-SA 4.0',attribution:'Wiktionary contributors via Kaikki; Thai drafts by Karen Bridge',entries},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=el('a');a.href=url;a.download='karen-bridge-saved.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+$('export-saved').onclick=()=>{const entries=data.entries.filter(e=>saved.includes(e.id));const blob=new Blob([JSON.stringify({license:'CC BY-SA 4.0',attribution:'Wiktionary contributors via Kaikki; Thai drafts and approximate reading aids by Karen Bridge',entries:entries.map(entry=>({...entry,thaiReading:thaiReading(entry)}))},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=el('a');a.href=url;a.download='karen-bridge-saved.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 $('mic').onclick=()=>{
  if(recognition){recognition.stop();return;}
  const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;if(!Speech)return;

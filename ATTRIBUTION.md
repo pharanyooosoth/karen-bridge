@@ -33,3 +33,7 @@ Original application code is released under the MIT License in `LICENSE`. That l
 ## Linked resources
 
 KTWG, DRUM, and SEAlang are linked for reference. Their dictionaries, teaching materials, and audio have not been copied into this repository. Public access alone was not treated as a bulk reuse license.
+
+## Approximate Thai reading aids (v1.1)
+
+The romanization inventory is documented at https://en.wiktionary.org/wiki/Wiktionary:S%27gaw_Karen_transliteration and https://en.wiktionary.org/wiki/Module:ksw-translit . Thai renderings are project adaptations, not attested Thai transcriptions. They do not preserve tones, phonation, or all dialect distinctions. The thank-you alternatives were supplied by the requesting user and are labeled as examples pending native-speaker review. Exported reading aids follow the dictionary adaptation license, CC BY-SA 4.0.
