@@ -19,3 +19,11 @@
 - External audio needs a live network; unavailable media shows a useful message and source link.
 
 Native-speaker linguistic validation is separate from software verification and remains pending.
+
+## Image translation (v1.2)
+
+Automated tests use a mocked OpenAI response, never real credentials: missing configuration, authentication, CORS, request limits, image signature spoofing, request schema/store:false, incomplete/refused/malformed output, provider errors/timeouts, and per-process rate limiting. These verify software behavior, not Karen OCR or translation accuracy.
+
+Actual OpenAI calls and linguistic accuracy remain unverified until the owner configures the backend/key and tests representative Karen images with a speaker. Static GitHub Pages remains usable without that configuration.
+
+Browser check (2026-11-12): unconfigured API correctly disables AI buttons; editing Karen text and opening its dictionary match works, including the Thai reading. Automated file selection was blocked by Chrome extension file-URL permissions, so actual file selection/preview was not verified in this session. No image or text was sent to OpenAI.

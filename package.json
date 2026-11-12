@@ -1,1 +1,15 @@
-{"name":"karen-bridge","version":"1.0.0","private":true,"type":"module","scripts":{"test":"node --test","build":"node scripts/build.mjs","dev":"python3 -m http.server 4173 --bind 127.0.0.1"},"engines":{"node":">=22"}}
+{
+  "name": "karen-bridge",
+  "version": "1.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "build": "node scripts/build.mjs",
+    "dev": "python3 -m http.server 4173 --bind 127.0.0.1",
+    "dev:api": "node --env-file-if-exists=.env server/dev.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
