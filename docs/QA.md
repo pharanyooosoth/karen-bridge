@@ -48,3 +48,7 @@ Browser QA: the local mock successfully rendered a sentence result and missing-r
 44 tests pass. The name-question case from the user is covered as an exact source lookup with zero provider calls. Source rows, wrapping, cross-page number 25, Thai aliases, reverse Karen lookup, reference forwarding, 451 searchable entries and 4 quarantined conversions have regression coverage. See KTWG-IMPORT.md.
 
 Browser check: with no configured local API/key, the sentence menu answered What is your name? directly from KTWG page 3, showing the source roman and labeled Thai approximation. The dictionary menu found the same row. Password and consent were left empty, confirming local lookup.
+
+## v1.7 — DRUM general and medical
+
+52 tests pass. New checks cover all source pages and entry counts, wrapped medical rows, the separately aligned X-Rays row, exclusion of two source anomalies, unsupported-reading refusal, separate medical search and Thai aliases, exact DRUM responses without paid calls, and actual DRUM records included in mocked OpenAI request context. Local browser checks: abdomen has source-linked romanization; เบาหวาน finds one medical result; diabetes in sentence mode returns both original source variants and page links without a password/API call. No claim of native-speaker pronunciation validation or live paid-model translation accuracy.

@@ -27,6 +27,7 @@ export function romanSyllableToThai(syllable) {
   return VOWELS[vowel](INITIALS[initial]+(MEDIALS[medial]||''));
 }
 export function thaiReading(entry) {
+  if(entry.romanSystem==='drum')return {readings:[...(entry.thaiReading||[])],method:entry.readingMethod||'unavailable'};
   if(entry.romanSystem==='ktwg')return {readings:[...(entry.thaiReading||[])],method:'course-roman-approximation'};
   if(USER_READINGS[entry.word]) return {readings:[...USER_READINGS[entry.word]],method:'user-example'};
   const readings=[];

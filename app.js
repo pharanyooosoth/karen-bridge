@@ -3,8 +3,9 @@ import {thaiReading} from './thai-reading.js';
 import {initImageTranslation} from './image-translate.js';
 import {initSentenceTranslation} from './sentence-translate.js';
 import {courseDictionaryEntries} from './course.js';
+import {prepareDrum,drumDictionaryEntries} from './drum.js';
 const $=id=>document.getElementById(id);
-let data,index,limit=40,currentView='translate',recognition=null,playing=null;
+let data,index,medicalIndex,medicalLimit=40,limit=40,currentView='translate',recognition=null,playing=null;
 const KEY='karen-bridge:saved:v1';
 let saved=[];
 try{const value=JSON.parse(localStorage.getItem(KEY)||'[]');saved=Array.isArray(value)?value.filter(x=>typeof x==='string'):[];}catch{}
@@ -21,10 +22,10 @@ function entryCard(entry,matchType){
  const star=el('button','save',saved.includes(entry.id)?'★':'☆');star.setAttribute('aria-label',`${saved.includes(entry.id)?'เลิกบันทึก':'บันทึก'} ${entry.word}`);star.setAttribute('aria-pressed',saved.includes(entry.id));star.onclick=()=>saveEntry(entry.id);top.append(star);card.append(top);
  const reading=thaiReading(entry);
  const thaiBox=el('div','thai-reading');
- thaiBox.append(el('div','thai-reading-label','คำอ่านภาษาไทยโดยประมาณ'));
+ thaiBox.append(el('div','thai-reading-label',entry.readingMethod==='drum-script-experimental'?'คำอ่านไทยทดลอง · ถอดจากอักษร':entry.romanSystem==='drum'?'คำอ่านไทยทดลอง · ถอดจากโรมัน':'คำอ่านภาษาไทยโดยประมาณ'));
  if(reading.readings.length){
   thaiBox.append(el('div','thai-reading-text',reading.readings.join(' / ')));
-  thaiBox.append(el('div','thai-reading-note',reading.method==='course-roman-approximation'?(entry.thaiReadingNote||'คำอ่านไทยยังไม่มีในบทเรียน'):reading.method==='user-example'?'ตัวอย่างคำอ่านที่ผู้ใช้เสนอ · ยังไม่ได้ตรวจโดยเจ้าของภาษา':'ถอดจากคำอ่านโรมันอัตโนมัติ · ยังไม่ได้ตรวจโดยเจ้าของภาษา'));
+  thaiBox.append(el('div','thai-reading-note',(entry.romanSystem==='drum'||reading.method==='course-roman-approximation')?(entry.thaiReadingNote||'คำอ่านไทยยังไม่มีในบทเรียน'):reading.method==='user-example'?'ตัวอย่างคำอ่านที่ผู้ใช้เสนอ · ยังไม่ได้ตรวจโดยเจ้าของภาษา':'ถอดจากคำอ่านโรมันอัตโนมัติ · ยังไม่ได้ตรวจโดยเจ้าของภาษา'));
   thaiBox.append(el('div','thai-reading-note','เสียงและวรรณยุกต์อาจไม่ตรงกับสำเนียงของคุณ'));
  }else thaiBox.append(el('div','small','ยังไม่มีคำอ่านไทยสำหรับรูปแบบนี้'));
  card.append(thaiBox);
@@ -32,6 +33,7 @@ function entryCard(entry,matchType){
  else card.append(el('div','small','ต้นฉบับไม่มีคำอ่านโรมัน'));
  for(const ipa of entry.ipa)card.append(el('div','ipa',`IPA ${ipa.text}${ipa.note?' · '+ipa.note:''}`));
  for(const sense of entry.senses){const d=el('div','sense');if(sense.th.length){d.append(el('div','',sense.th.join(' · ')),el('div','draft','ความหมายไทยฉบับร่าง · แปลจากอังกฤษ'));}else d.append(el('div','small','ยังไม่มีความหมายไทย — ดูภาษาอังกฤษด้านล่าง'));d.append(el('div','english',sense.en.join('; ')));for(const tag of sense.tags)d.append(el('span','tag',tag));card.append(d);}
+ if(entry.readingReferences?.length){card.append(el('p','small','พบคำเขียนตรงกับคำที่มีโรมันใน DRUM Word List'));for(const ref of entry.readingReferences)card.append(link(`คำอ่านต้นทาง หน้า ${ref.page}: ${ref.roman.join(' / ')}`,ref.source,'course-source'));}
  const actions=el('div','entry-actions');
  if(entry.audio.length){const audio=entry.audio[0];const play=el('button','','♫ ฟังเสียงกะเหรี่ยง');play.onclick=async()=>{if(playing){playing.pause();playing=null;}const sound=new Audio(audio.url);playing=sound;try{await sound.play();toast('กำลังเล่นเสียงจาก Wikimedia Commons');}catch{toast('เปิดเสียงไม่ได้ กรุณาเปิดแหล่งเสียงต้นฉบับ');}};actions.append(play);card.append(link(`เสียง: ${audio.author} · ${audio.license}`,audio.source,'audio-credit'));}
  else actions.append(el('span','no-audio','ยังไม่มีไฟล์เสียงคำนี้'));
@@ -55,8 +57,22 @@ function render(){
   for(const part of parts){if(part.known){const b=el('button','',part.text);b.onclick=()=>{$('query').value=part.text;limit=40;render();};box.append(b);}else box.append(el('span','unknown',part.text+' · ไม่รู้จัก'));} $('segments').append(box);
  }
 }
+function renderMedical(){
+ if(!medicalIndex)return;
+ const query=$('medical-query').value,language=$('medical-language').value;
+ const result=query.trim()?search(medicalIndex,query,language,{limit:medicalLimit}):{matches:medicalIndex.slice(0,medicalLimit).map(r=>({entry:r.entry,exact:false})),total:medicalIndex.length,exact:0};
+ $('medical-summary').textContent=query.trim()?`พบ ${result.total} รายการ · ตรงคำ ${result.exact} รายการ`:'เลือกคำตัวอย่างหรือพิมพ์คำค้น · ความหมายไทยมีบางรายการ ลองอังกฤษหากไม่พบ';
+ $('medical-results').replaceChildren(...result.matches.map(m=>entryCard(m.entry,query.trim()?(m.exact?'คำตรงกัน':'ตรงบางส่วน · ไม่ใช่คำแปลตรงตัว'):null)));
+ if(!result.total)$('medical-results').append(el('p','intro','ไม่พบในฐานศัพท์แพทย์ ลองภาษาอังกฤษหรือคำที่สั้นลง'));
+ $('medical-more').hidden=result.total<=result.matches.length;
+}
+$('medical-query').oninput=()=>{medicalLimit=40;renderMedical();};
+$('medical-language').onchange=()=>{medicalLimit=40;renderMedical();};
+$('medical-search').onclick=()=>{medicalLimit=40;renderMedical();};
+$('medical-more').onclick=()=>{medicalLimit+=40;renderMedical();};
+for(const button of document.querySelectorAll('[data-medical-query]'))button.onclick=()=>{$('medical-query').value=button.dataset.medicalQuery;$('medical-language').value='en';medicalLimit=40;renderMedical();};
 function renderSaved(){if(!data)return;const entries=data.entries.filter(e=>saved.includes(e.id));$('saved-list').replaceChildren(...entries.map(e=>entryCard(e)));if(!entries.length)$('saved-list').append(el('p','intro','ยังไม่มีคำที่บันทึก กด ☆ ข้างคำที่อยากทบทวน'));$('export-saved').disabled=!entries.length;}
-function view(name){currentView=name;document.querySelectorAll('.view').forEach(n=>n.hidden=n.id!==`view-${name}`);document.querySelectorAll('.nav-item').forEach(n=>{n.classList.toggle('active',n.dataset.view===name);if(n.dataset.view===name)n.setAttribute('aria-current','page');else n.removeAttribute('aria-current');});if(name==='saved')renderSaved();}
+function view(name){currentView=name;document.querySelectorAll('.view').forEach(n=>n.hidden=n.id!==`view-${name}`);document.querySelectorAll('.nav-item').forEach(n=>{n.classList.toggle('active',n.dataset.view===name);if(n.dataset.view===name)n.setAttribute('aria-current','page');else n.removeAttribute('aria-current');});if(name==='saved')renderSaved();if(name==='medical')renderMedical();}
 function updateLanguage(){$('reading-help').hidden=$('language').value!=='thai-reading';if(recognition)recognition.abort();$('query').lang=$('language').value==='ksw'?'ksw':['th','thai-reading'].includes($('language').value)?'th':'en';$('query').placeholder={th:'พิมพ์คำที่อยากรู้ เช่น น้ำ ขอบคุณ…',en:'Type a word, e.g. water, thank you…',ksw:'พิมพ์หรือวางอักษรกะเหรี่ยง เช่น ထံ',roman:'พิมพ์คำอ่านโรมันตามต้นฉบับ เช่น hṭee','thai-reading':'พิมพ์คำอ่านภาษาไทย เช่น ที ตาบลึ ตะบลือ…'}[$('language').value];const supported=Boolean(window.SpeechRecognition||window.webkitSpeechRecognition);$('mic').disabled=!supported||!['th','en'].includes($('language').value);$('speech-status').textContent=$('language').value==='thai-reading'?'พิมพ์คำอ่านภาษาไทยเพื่อค้นเสียงกะเหรี่ยงในพจนานุกรม':!supported?'เบราว์เซอร์นี้ไม่รองรับรับเสียง กรุณาพิมพ์ข้อความ':!['th','en'].includes($('language').value)?'รับเสียงได้เฉพาะไทยและอังกฤษ กรุณาพิมพ์ภาษากะเหรี่ยง':'การใช้ไมค์อาจส่งเสียงไปยังบริการรู้จำเสียงของเบราว์เซอร์';limit=40;render();}
 $('query').oninput=()=>{limit=40;render();};$('query').onkeydown=e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();render();}};
 $('search').onclick=()=>render();$('language').onchange=updateLanguage;$('audio-only').onchange=()=>{limit=40;render();};
@@ -65,7 +81,7 @@ $('swap').onclick=()=>{const old=$('language').value;if(old==='ksw'){$('language
 $('load-more').onclick=()=>{limit+=40;render();};
 for(const button of document.querySelectorAll('[data-query]'))button.onclick=()=>{$('language').value=button.dataset.language||'th';$('query').value=button.dataset.query;$('audio-only').checked=false;updateLanguage();};
 for(const button of document.querySelectorAll('[data-view]'))button.onclick=()=>view(button.dataset.view);
-$('export-saved').onclick=()=>{const entries=data.entries.filter(e=>saved.includes(e.id));const blob=new Blob([JSON.stringify({license:'Mixed sources; see each entry license and source',attribution:'Wiktionary contributors via Kaikki and user-supplied KTWG course; project Thai additions',entries:entries.map(entry=>({...entry,license:entry.coursePage?"KTWG course; original rights retained, not licensed as Wiktionary CC BY-SA":"CC BY-SA 4.0",thaiReading:thaiReading(entry)}))},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=el('a');a.href=url;a.download='karen-bridge-saved.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+$('export-saved').onclick=()=>{const entries=data.entries.filter(e=>saved.includes(e.id));const blob=new Blob([JSON.stringify({license:'Mixed sources; see each entry license and source',attribution:'Wiktionary contributors via Kaikki and user-supplied KTWG and DRUM sources; project Thai additions',entries:entries.map(entry=>({...entry,license:entry.license||(entry.coursePage?"KTWG course; original rights retained, not licensed as Wiktionary CC BY-SA":"CC BY-SA 4.0"),thaiReading:thaiReading(entry)}))},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=el('a');a.href=url;a.download='karen-bridge-saved.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 $('mic').onclick=()=>{
  if(recognition){recognition.stop();return;}
  const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;if(!Speech)return;
@@ -78,7 +94,7 @@ $('mic').onclick=()=>{
 };
 window.addEventListener('pagehide',()=>{recognition?.abort();playing?.pause();});
 updateCount();updateLanguage();view('translate');
-try{const response=await fetch('./data/dictionary.json');if(!response.ok)throw new Error('dictionary unavailable');data=await response.json();try{const cr=await fetch("./data/ktwg-course.json");if(!cr.ok)throw Error();const course=await cr.json();data.entries.push(...courseDictionaryEntries(course));data.meta.words=new Set(data.entries.map(e=>e.word)).size;data.meta.thaiEntries=data.entries.filter(e=>e.senses.some(s=>s.th.length)).length;}catch{toast("โหลดบทเรียน KTWG ไม่สำเร็จ ยังค้นพจนานุกรมเดิมได้");}index=buildIndex(data.entries);$('word-stat').textContent=data.meta.words.toLocaleString('en');$('thai-stat').textContent=data.meta.thaiEntries.toLocaleString('en');$('audio-stat').textContent=data.meta.audioFiles;render();}catch{$('result-summary').textContent='โหลดพจนานุกรมไม่ได้ กรุณารีโหลดหน้าเว็บ หรือตรวจการเชื่อมต่อ';$('search').disabled=true;}
+try{const response=await fetch('./data/dictionary.json');if(!response.ok)throw new Error('dictionary unavailable');data=await response.json();try{const cr=await fetch("./data/ktwg-course.json");if(!cr.ok)throw Error();const course=await cr.json();data.entries.push(...courseDictionaryEntries(course));data.meta.words=new Set(data.entries.map(e=>e.word)).size;data.meta.thaiEntries=data.entries.filter(e=>e.senses.some(s=>s.th.length)).length;}catch{toast("โหลดบทเรียน KTWG ไม่สำเร็จ ยังค้นพจนานุกรมเดิมได้");}try{const responses=await Promise.all(['general','medical'].map(kind=>fetch(`./data/drum-${kind}.json`)));if(responses.some(r=>!r.ok))throw Error();const [general,medical]=await Promise.all(responses.map(r=>r.json()));const drum=prepareDrum(general,medical);data.entries.push(...drumDictionaryEntries(drum));medicalIndex=buildIndex(data.entries.filter(e=>e.domain==='medical'));$('medical-status').textContent=`DRUM Medical Terms ปี 2008 · ${medicalIndex.length} รายการพร้อมใช้ / ${medical.meta.entryCount} รายการ · ${medical.meta.pageCount} หน้า PDF · 2 รายการพักไว้ตรวจต้นฉบับ`;}catch{$('medical-status').textContent='โหลดฐานศัพท์แพทย์ไม่ได้ กรุณารีโหลด';toast('โหลดฐาน DRUM ไม่สำเร็จ');}data.meta.words=new Set(data.entries.map(e=>e.word)).size;data.meta.thaiEntries=data.entries.filter(e=>e.senses.some(s=>s.th.length)).length;index=buildIndex(data.entries.filter(e=>e.domain!=='medical'));$('word-stat').textContent=data.meta.words.toLocaleString('en');$('thai-stat').textContent=data.meta.thaiEntries.toLocaleString('en');$('audio-stat').textContent=data.meta.audioFiles;render();}catch{$('result-summary').textContent='โหลดพจนานุกรมไม่ได้ กรุณารีโหลดหน้าเว็บ หรือตรวจการเชื่อมต่อ';$('search').disabled=true;}
 
 initImageTranslation({onDictionaryLookup(text){$('language').value='ksw';$('query').value=text.slice(0,500);$('audio-only').checked=false;view('translate');updateLanguage();if(text.length>500)toast('นำข้อความ 500 ตัวอักษรแรกมาค้นพจนานุกรม');}});
 

@@ -10,7 +10,7 @@ export function courseMatches(course,text,language){
  const key=courseKey(text,language);if(!key||!['sgaw_karen','thai','english'].includes(language))return [];
  return course.entries.filter(e=>!e.needsReview&&values(e,language).some(s=>courseKey(s,language)===key));
 }
-export function courseReference(e){return {id:e.id,text:e.word,english:e.english,thai:e.thai,roman:e.roman,page:e.page,sourcePages:e.sourcePages,source:e.source,section:e.section,thai_reading:e.thaiReading?.join(' / ')||'',thai_reading_note:e.thaiReadingNote||'',status:'Source extraction and legacy-font conversion; not native-speaker validated'};}
+export function courseReference(e){return {id:e.id,sourceLabel:e.sourceLabel||'KTWG',domain:e.domain||'course',text:e.word,english:e.english,thai:e.thai,roman:e.roman,page:e.page,sourcePages:e.sourcePages,source:e.source,section:e.section,thai_reading:e.thaiReading?.join(' / ')||'',thai_reading_note:e.thaiReadingNote||'',status:'Source extraction and legacy-font conversion; not native-speaker validated'};}
 export function exactCourseTranslation(course,text,sourceLanguage,target){
  if(({english:'en',thai:'th',sgaw_karen:'sgaw_karen'})[sourceLanguage]===target)return null;
  const matches=courseMatches(course,text,sourceLanguage).filter(e=>target!=='th'||e.thai.length);

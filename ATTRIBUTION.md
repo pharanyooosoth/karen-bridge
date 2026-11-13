@@ -43,3 +43,7 @@ The restricted KNU-to-Unicode character mapping is independently implemented usi
 ## Approximate Thai reading aids (v1.1)
 
 The romanization inventory is documented at https://en.wiktionary.org/wiki/Wiktionary:S%27gaw_Karen_transliteration and https://en.wiktionary.org/wiki/Module:ksw-translit . Thai renderings are project adaptations, not attested Thai transcriptions. They do not preserve tones, phonation, or all dialect distinctions. The thank-you alternatives were supplied by the requesting user and are labeled as examples pending native-speaker review. Exported reading aids follow the dictionary adaptation license, CC BY-SA 4.0.
+
+## DRUM user-supplied vocabulary (v1.7)
+
+`data/drum-general.json` and `data/drum-medical.json` derive from the user's DRUM Transliterated Sgaw Karen Word List and Medical Terms (2nd edition, 2008). The user confirmed permission to publish this derived database on 2026-11-13. DRUM Publication Group retains its rights. These sources are not relicensed under Wiktionary CC BY-SA or the project's code license. Each entry links to the original PDF page. No original PDF, audio, or font binaries are redistributed. Thai meaning aliases and experimental pronunciation are project additions, not DRUM-provided Thai translations. Details: [DRUM import](docs/DRUM-IMPORT.md).

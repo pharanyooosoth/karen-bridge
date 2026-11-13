@@ -36,3 +36,7 @@
 เลือกชุมชนเป้าหมายและสำเนียง → ทบทวนความหมายไทย 375 รายการ → เพิ่มประโยคใช้จริงที่มีบริบท → บันทึกเสียงเจ้าของภาษาโดยได้รับอนุญาตเผยแพร่ → จัดชุดทดสอบที่ไม่ซ้ำข้อมูลฝึก → ประเมินการสื่อสารก่อนใช้บริการแปลประโยคอัตโนมัติ
 
 เก็บชื่อผู้ตรวจ วันที่ แหล่งอ้างอิง สำเนียง สัญญาอนุญาต และสถานะการตรวจระดับ sense/คลิป หากไม่ทราบ ให้คงสถานะรอตรวจ ไม่ยกระดับเป็น verified เอง
+
+## DRUM ingestion (2026-11-13)
+
+The user-supplied DRUM Word List and Medical Terms 2008 are now actual searchable data, not just links: 958 and 720 records respectively, with page provenance. The user confirmed publishing permission. Two medical source anomalies are excluded from results. [DRUM import](DRUM-IMPORT.md) documents extraction, source rights, and experimental pronunciation rules based on the official guide. Medical records are historical vocabulary, not validated clinical guidance. Both sources are included in backend retrieval.

@@ -88,3 +88,11 @@ The user-supplied KTWG v2 course is now an actual database, not just a link: 28 
 Both word search and sentence translation use the course. Exact sentence matches are returned locally without an access code or OpenAI call; the protected API has the same deterministic path. Other sentences send up to 8 relevant source records to OpenAI and display their source pages. Unrelated references are not proof of a generated translation. The backend advertises `ktwg-course` (API version 4); no environment-variable change is needed.
 
 Acceptance example: `What is your name?`, `What's your name?`, and `What’s your name?` resolve to `နမံၤဒ်လဲၣ်`, roman `na mee di leh?`, KTWG page 3. Thai aliases include `คุณชื่ออะไร`. The Thai reading aid `นา มี ดิ เล` is explicitly a project approximation, not a Thai transcription in the PDF. See `docs/KTWG-IMPORT.md` for limits and audit details.
+
+### v1.7 — DRUM general and medical vocabulary
+
+Added the two user-provided DRUM PDFs to the actual project database: 958 general entries and 720 medical entries (718 searchable; two source anomalies retained for review). The new **ศัพท์ทางการแพทย์** menu searches medical terms separately by English, available Thai aliases, Karen script, or approximate Thai reading. Each result links to its PDF page.
+
+Medical pronunciation first matches a complete Karen spelling against the general word list's romanization. Other supported spellings receive an explicitly experimental Thai reading based on DRUM's guide; unknown structures return no reading. Tones and dialect differences are not guaranteed. This 2008 glossary is a vocabulary aid, not treatment/dosage guidance.
+
+Both datasets also participate in sentence exact lookup and relevant API context. No new API key or environment variable is needed; Vercel builds include the JSON files. API health is version 5 with `drum-glossary`. [Import and QA details](docs/DRUM-IMPORT.md).

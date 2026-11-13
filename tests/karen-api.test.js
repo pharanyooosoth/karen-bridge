@@ -128,3 +128,12 @@ test('novel sentence forwards relevant KTWG records with source pages to OpenAI'
  const response=await handle(request({action:'sentence',text:'What is your name? Please tell me again.',sourceLanguage:'english',target:'sgaw_karen'}),env);assert.equal(response.status,200);
  const context=JSON.parse(sent.input[0].content[0].text);assert.ok(context.course_references.some(r=>r.page===3&&r.text==='နမံၤဒ်လဲၣ်'));assert.ok((await response.json()).courseReferences.length>0);
 });
+test('DRUM medical exact lookup does not call OpenAI and preserves source page and experimental label',async()=>{
+ let calls=0;const handle=createKarenHandler({fetchImpl:async()=>{calls++;throw Error('unexpected paid call');}});
+ const response=await handle(request({action:'sentence',text:'diabetes',sourceLanguage:'english',target:'sgaw_karen'}),env);assert.equal(response.status,200);const body=await response.json();assert.equal(body.provider,'drum-glossary');assert.ok([body.data.translation,...body.data.alternatives].includes('ဆံၣ်ဆၢတၢ်ဆါ'));assert.equal(body.data.reading_basis,'drum_approximation');assert.ok(body.courseReferences.some(r=>r.domain==='medical'&&r.page===13));assert.equal(calls,0);
+});
+test('novel medical sentence sends DRUM evidence to API, not only website links',async()=>{
+ let sent;const handle=createKarenHandler({fetchImpl:async(url,options)=>{sent=JSON.parse(options.body);return Response.json(model(answer));}});
+ await handle(request({action:'sentence',text:'The patient has diabetes.',sourceLanguage:'english',target:'sgaw_karen'}),env);
+ const context=JSON.parse(sent.input[0].content[0].text);assert.ok(context.course_references.some(r=>r.domain==='medical'&&r.english==='diabetes'));assert.match(sent.instructions,/not clinical guidance/);
+});

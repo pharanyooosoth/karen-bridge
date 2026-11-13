@@ -6,3 +6,6 @@ data/source.jsonl
 *.zip
 !.env.example
 .vercel/
+
+__pycache__/
+*.pyc

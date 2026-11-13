@@ -11,3 +11,6 @@
 #sentence-text,#sentence-reference,#sentence-result .ai-translation{font-family:"Noto Sans Thai","Noto Sans Myanmar",sans-serif}
 
 .course-source{display:block;margin:10px 0;overflow-wrap:anywhere}.course-status{padding:14px 18px;border-left:3px solid #8da76d;background:#eef4e6;font-size:14px}
+
+.medical-search{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:28px 0}.medical-search input{flex:1;min-width:210px;padding:18px;border:1px solid var(--line,#dce4da);border-radius:12px;font:inherit}.medical-notice{margin:20px 0}.medical-notice p{margin:10px 0}#medical-results .entry{min-width:0;overflow-wrap:anywhere}#medical-more{margin:24px 0}
+.medical-search select{font:inherit;color:var(--ink,#234b40);background:#f4f7ee;border:1px solid #dce4da;border-radius:12px;padding:16px;max-width:100%}.suggestions{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:20px 0}.suggestions button{font:inherit;color:#436c48;border:1px solid #d4e0c8;border-radius:28px;background:transparent;padding:12px 20px;cursor:pointer}.suggestions button:hover{background:#eaf0df}.sidebar{overflow-y:auto}@media(max-width:600px){.medical-search{align-items:stretch}.medical-search label,.medical-search select,.medical-search input,.medical-search button{width:100%;flex-basis:100%}}
