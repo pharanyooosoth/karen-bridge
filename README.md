@@ -7,7 +7,7 @@
 รุ่นเริ่มต้นสำหรับค้นคำและวลีที่มีข้อมูลอ้างอิง **ยังไม่ใช่ตัวแปลประโยคหรือเสียงสนทนาอัตโนมัติเต็มรูปแบบ**
 
 - 1,037 คำเขียน / 1,200 รายการจาก Wiktionary ผ่าน Kaikki
-- ความหมายไทยฉบับร่าง 375 รายการ แปลจากอังกฤษ ยังไม่ได้ตรวจโดยเจ้าของภาษา
+- ความหมายไทยฉบับร่างครบ 3,492 นิยามที่มีข้อความอังกฤษในฐานข้อมูลทั้งสี่ชุด (รวมรายการพักตรวจ) เพิ่มใหม่ 2,941 นิยาม; ยังไม่ได้ตรวจโดยเจ้าของภาษา
 - ค้นย้อนกลับด้วย **คำอ่านภาษาไทย** เช่น ที → น้ำ, ตาบลึ / ตะบลือ → ขอบคุณ เลือกภาษาต้นทาง “คำอ่านภาษาไทย” หรือกดตัวอย่าง “คำอ่าน: ที”; รองรับการเว้นวรรคและขีดคั่นพยางค์ แสดงทุกคำที่เสียงตรงกันโดยไม่เดาความหมาย
 - คำอ่านไทยโดยประมาณแสดงก่อนโรมัน / IPA; รูปแบบที่ไม่รองรับแจ้งว่าไม่มีคำอ่านไทย
 - ขอบคุณ → ตาบลึ / ตะบลือ (ตัวอย่างจากผู้ใช้); คำอื่นถอดจากโรมันตามกฎใน `thai-reading.js` โดยไม่แปลงวรรณยุกต์และยังไม่ผ่านเจ้าของภาษาตรวจ
@@ -49,6 +49,7 @@ Repository Settings → Pages → Source: **GitHub Actions**
 ```sh
 curl -fL 'https://kaikki.org/dictionary/S%27gaw%20Karen/kaikki.org-dictionary-SgawKaren.jsonl' -o data/source.jsonl
 python3 scripts/build-data.py
+npm run data:thai
 npm test
 npm run build
 ```
@@ -64,7 +65,8 @@ npm run build
 - [x] เพิ่ม input เสียงไทย/อังกฤษแบบตรวจความสามารถเบราว์เซอร์
 - [x] เตรียม GitHub Pages CI/CD และ tests
 - [ ] ให้ชุมชนเป้าหมายยืนยันสำเนียง/ระบบเขียน
-- [ ] ตรวจร่างไทยและเพิ่มคำไทยให้ครบ
+- [x] เติมร่างไทยครบรายการที่มีนิยามอังกฤษ
+- [ ] ให้ผู้รู้ภาษาและบุคลากรแพทย์ตรวจร่างไทย
 - [ ] เพิ่มคลิปเสียงและวลีที่เจ้าของภาษาตรวจแล้ว
 - [x] เพิ่มหน้าอัปโหลดภาพ และ backend OpenAI พร้อมรหัสเข้าใช้
 - [ ] ตั้งค่า backend/API key จริง แล้วตรวจการเชื่อมต่อ
@@ -74,7 +76,7 @@ npm run build
 
 ## License
 
-โค้ด MIT; ข้อมูลพจนานุกรมและร่างแปล CC BY-SA 4.0; เสียงตามใบอนุญาตรายไฟล์ ดู ATTRIBUTION.md
+โค้ด MIT; ข้อมูล Wiktionary และร่างแปลที่เกี่ยวข้อง CC BY-SA 4.0; ข้อมูล KTWG / DRUM คงสิทธิ์ตามแหล่งต้นฉบับ; เสียงตามใบอนุญาตรายไฟล์ ดู ATTRIBUTION.md
 # Sentence translation (v1.5)
 
 The new sentence menu translates complete text between Thai, English and Sgaw Karen (all six directions, up to 6,000 characters). It uses the existing Vercel API configuration and access code. Users choose languages, optionally add context, consent to sending text, and translate. Results remain drafts; Karen pronunciation still requires reference evidence. Swap, copy and cancel controls are included. No sentence history or access code is saved.
@@ -96,3 +98,22 @@ Added the two user-provided DRUM PDFs to the actual project database: 958 genera
 Medical pronunciation first matches a complete Karen spelling against the general word list's romanization. Other supported spellings receive an explicitly experimental Thai reading based on DRUM's guide; unknown structures return no reading. Tones and dialect differences are not guaranteed. This 2008 glossary is a vocabulary aid, not treatment/dosage guidance.
 
 Both datasets also participate in sentence exact lookup and relevant API context. No new API key or environment variable is needed; Vercel builds include the JSON files. API health is version 5 with `drum-glossary`. [Import and QA details](docs/DRUM-IMPORT.md).
+
+### v1.8 — ความหมายไทยครบฐานข้อมูล
+
+เติมความหมายไทยจากนิยามอังกฤษให้ทั้ง Wiktionary, KTWG และ DRUM สองชุด โดยคงอักษรกะเหรี่ยง อังกฤษ คำอ่าน เลขหน้า และข้อมูลเดิมทั้งหมดไว้ เช่น `clavicle` → **กระดูกไหปลาร้า / ไหปลาร้า** ค้นไทยย้อนกลับไปยังรายการเดิมได้ และคำแปลนี้ถูกส่งเป็นข้อมูลอ้างอิงใน API ด้วย ไม่ต้องเรียก OpenAI เพื่อค้นศัพท์ที่มีอยู่แล้ว
+
+ตาราง `data/thai-meanings.json` ผูกนิยามอังกฤษเต็มกับความหมายไทย ไม่ใช่การแทนคำในประโยค คำกำกวมมี overrides ตามแหล่งข้อมูล เช่น Cold ใน DRUM General หมายถึงเย็น/หนาว คำไทยเดิมคงไว้ การแก้คำแปลใหม่ต้องแก้ทั้งตารางนี้และแถวฐานข้อมูลที่เกี่ยวข้อง เพื่อรักษาความสามารถในการนำเข้าใหม่
+
+`npm run data:thai` เติมเฉพาะช่องว่างและตรวจ coverage; `npm run build` เรียกขั้นตอนนี้อัตโนมัติ หลังนำเข้า PDF หรือ Wiktionary ใหม่ให้รัน `npm run data:thai` ก่อน `npm test` หากมีนิยามใหม่ที่ยังไม่มีคู่ไทยจะหยุดพร้อมรายการที่ต้องแปล ป้องกันการปล่อยเว็บที่ขาดคำไทยโดยไม่ทราบ
+
+| ฐานข้อมูล | นิยามอังกฤษที่มีไทย | เพิ่มไทยครั้งนี้ |
+|---|---:|---:|
+| Wiktionary | 1,359 | 966 |
+| KTWG | 455 | 412 |
+| DRUM General | 958 | 912 |
+| DRUM Medical | 720 | 651 |
+
+อีก 2 sense ของ Wiktionary ไม่มีนิยามอังกฤษ จึงไม่สร้างความหมายขึ้นเอง รายการพักตรวจ 4 KTWG และ 2 DRUM Medical ยังคงไม่ถูกนำมาใช้ตอบ แม้เติมความหมายไทยของข้อความต้นฉบับแล้ว คำแปลทั้งหมดเป็นฉบับร่างที่แปลจากอังกฤษ ไม่ใช่คำไทยใน PDF และยังไม่ผ่านการตรวจโดยเจ้าของภาษาหรือผู้เชี่ยวชาญแพทย์ คำศัพท์เก่า/สะกดผิด/กำกวมในต้นฉบับยังต้องตรวจบริบท
+
+ตรวจด้วย `npm test`: ครอบคลุมทุกนิยาม การนำเข้าซ้ำ คำไทยเดิม การค้นย้อนกลับทุก alias และ clavicle ผ่าน search / exact translation / API reference retrieval

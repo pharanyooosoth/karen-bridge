@@ -1,3 +1,5 @@
+import {applyAll} from './apply-thai.mjs';
+await applyAll();
 import {mkdir,copyFile,rm,readFile,writeFile} from 'node:fs/promises';
 await rm('dist',{recursive:true,force:true});
 for(const dir of ['dist/data','dist/docs'])await mkdir(dir,{recursive:true});

@@ -11,7 +11,7 @@ export function buildIndex(entries) {
   return entries.map(entry => ({entry, keys:{
     ksw:[normalize(entry.word)],
     en:entry.senses.flatMap(s=>s.en.flatMap(g=>[normalize(g),glossKey(g)])),
-    th:entry.senses.flatMap(s=>s.th.flatMap(g=>g.split(';').map(normalize))),
+    th:entry.senses.flatMap(s=>s.th.flatMap(g=>g.split(';').map(g=>normalize(g).replace(/[!?。။]+$/u,'')))),
     roman:entry.roman.map(normalize),
     'thai-reading':thaiReading(entry).readings.map(thaiReadingKey)
   }}));

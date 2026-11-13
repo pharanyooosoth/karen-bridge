@@ -1,13 +1,14 @@
 {
   "name": "karen-bridge",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "private": true,
   "type": "module",
   "scripts": {
     "test": "node --test",
     "build": "node scripts/build.mjs",
     "dev": "python3 -m http.server 4173 --bind 127.0.0.1",
-    "dev:api": "node --env-file-if-exists=.env server/dev.mjs"
+    "dev:api": "node --env-file-if-exists=.env server/dev.mjs",
+    "data:thai": "node scripts/apply-thai.mjs"
   },
   "engines": {
     "node": ">=22"

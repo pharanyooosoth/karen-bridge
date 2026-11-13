@@ -51,7 +51,7 @@ function render(){
  if(language==='thai-reading')$('result-summary').textContent=result.total?`${result.exact?'พบคำอ่านตรงกัน '+result.exact+' รายการ':'พบคำอ่านบางส่วน'} · ทั้งหมด ${result.total} รายการ · คำอ่านโดยประมาณอาจตรงหลายคำ`:'ไม่พบคำอ่านนี้ในชุดข้อมูลปัจจุบัน';
  $('results').replaceChildren(...result.matches.map(m=>entryCard(m.entry,language==='thai-reading'?(m.exact?'คำอ่านตรงกัน · โดยประมาณ':'คำอ่านตรงบางส่วน · ไม่ใช่คำแปลตรงตัว'):(m.exact?'คำตรงกัน':'คำที่เกี่ยวข้อง · ไม่ใช่คำแปลตรงตัว'))));
  $('load-more').hidden=result.total<=result.matches.length;
- if(!result.total){const empty=el('div','empty');empty.append(el('h3','','ลองคำสั้นลง หรือเปลี่ยนภาษา'),el('p','',language==='thai-reading'?'ยังไม่มีคำอ่านรูปแบบนี้ ลองการสะกดอีกแบบ หรือค้นด้วยความหมายไทย/อังกฤษ':language==='th'?'คำไทยครอบคลุมเพียงบางรายการ ลองค้นภาษาอังกฤษของคำเดียวกัน':'ระบบจะไม่เดาคำแปลเมื่อไม่มีข้อมูล'));$('results').append(empty);}
+ if(!result.total){const empty=el('div','empty');empty.append(el('h3','','ลองคำสั้นลง หรือเปลี่ยนภาษา'),el('p','',language==='thai-reading'?'ยังไม่มีคำอ่านรูปแบบนี้ ลองการสะกดอีกแบบ หรือค้นด้วยความหมายไทย/อังกฤษ':language==='th'?'ไม่พบคำไทยรูปแบบนี้ ลองคำพ้องหรือภาษาอังกฤษของคำเดียวกัน':'ระบบจะไม่เดาคำแปลเมื่อไม่มีข้อมูล'));$('results').append(empty);}
  if(language==='ksw'&&!result.exact&&query.trim()){
   const parts=segmentKaren(index,query);const box=el('div','segment-box');box.append(el('p','','แยกคำเพื่อช่วยอ่าน (อาจแบ่งผิด) · ไม่ใช่คำแปลทั้งประโยค'));
   for(const part of parts){if(part.known){const b=el('button','',part.text);b.onclick=()=>{$('query').value=part.text;limit=40;render();};box.append(b);}else box.append(el('span','unknown',part.text+' · ไม่รู้จัก'));} $('segments').append(box);
@@ -61,7 +61,7 @@ function renderMedical(){
  if(!medicalIndex)return;
  const query=$('medical-query').value,language=$('medical-language').value;
  const result=query.trim()?search(medicalIndex,query,language,{limit:medicalLimit}):{matches:medicalIndex.slice(0,medicalLimit).map(r=>({entry:r.entry,exact:false})),total:medicalIndex.length,exact:0};
- $('medical-summary').textContent=query.trim()?`พบ ${result.total} รายการ · ตรงคำ ${result.exact} รายการ`:'เลือกคำตัวอย่างหรือพิมพ์คำค้น · ความหมายไทยมีบางรายการ ลองอังกฤษหากไม่พบ';
+ $('medical-summary').textContent=query.trim()?`พบ ${result.total} รายการ · ตรงคำ ${result.exact} รายการ`:'เลือกคำตัวอย่างหรือพิมพ์คำค้นไทย / อังกฤษ · ความหมายไทยฉบับร่างจากอังกฤษ';
  $('medical-results').replaceChildren(...result.matches.map(m=>entryCard(m.entry,query.trim()?(m.exact?'คำตรงกัน':'ตรงบางส่วน · ไม่ใช่คำแปลตรงตัว'):null)));
  if(!result.total)$('medical-results').append(el('p','intro','ไม่พบในฐานศัพท์แพทย์ ลองภาษาอังกฤษหรือคำที่สั้นลง'));
  $('medical-more').hidden=result.total<=result.matches.length;
