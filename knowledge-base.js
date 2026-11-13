@@ -13,7 +13,7 @@ export function createKnowledgeBase(dictionary,course,general,medical){
   return {id:e.senses.length===1?e.id:`${e.id}:sense:${i}`,entryId:e.id,word:e.word,english:original?.english||sense.en.join('; '),englishAliases:[...sense.en,...sense.en.map(glossKey)],thai:sense.th,roman:e.roman,thaiReading:reading.readings,thaiReadingNote:e.thaiReadingNote||'คำอ่านโดยประมาณ ยังไม่ได้ตรวจโดยเจ้าของภาษา',readingMethod:reading.method,source:e.source,sourceLabel:e.sourceLabel||original?.sourceLabel,domain:e.domain,page:original?.page,sourcePages:original?.sourcePages,section:original?.section};
  }));
  const index=buildIndex(entries);
- return {entries,index,medicalIndex:index.filter(r=>r.entry.domain==='medical'),records,meta:{entries:entries.length,words:new Set(entries.map(e=>e.word)).size,thaiEntries:entries.filter(e=>e.senses.some(s=>s.th.length)).length,audioFiles:entries.reduce((n,e)=>n+e.audio.length,0),courseEntries:course.meta.entryCount,drumEntries:drum.meta.entryCount,medicalEntries:medical.meta.entryCount,medicalPages:medical.meta.pageCount}};
+ return {entries,index,medicalIndex:index.filter(r=>r.entry.domain==='medical'),records,meta:{entries:entries.length,words:new Set(entries.map(e=>e.word)).size,thaiEntries:entries.filter(e=>e.senses.some(s=>s.th.length)).length,audioFiles:new Set(entries.flatMap(e=>e.audio.map(a=>a.url))).size,courseEntries:course.meta.entryCount,drumEntries:drum.meta.entryCount,medicalEntries:medical.meta.entryCount,medicalPages:medical.meta.pageCount}};
 }
 export function exactTranslation(base,text,language,target){
  const result=exactCourseTranslation({entries:base.records},text,language,target);if(!result)return null;

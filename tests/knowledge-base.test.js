@@ -15,7 +15,7 @@ test('general and medical views use the same records; user symptom is available 
  assert.equal(exactTranslation(knowledge,'ปัสสาวะแสบ','thai','sgaw_karen'),null);
 });
 test('all four sources survive in one model, retaining source identifiers and quarantines',()=>{
- assert.equal(knowledge.entries.length,3327);assert.equal(knowledge.medicalIndex.length,718);
+ assert.equal(knowledge.entries.length,3327);assert.equal(knowledge.meta.audioFiles,2);assert.equal(knowledge.medicalIndex.length,718);
  const quarantined=raw.flatMap(d=>d.entries.filter(e=>e.needsReview));assert.equal(quarantined.length,6);
  for(const e of quarantined)assert.ok(!knowledge.records.some(r=>r.entryId===e.id));
  for(const label of ['Wiktionary','KTWG','DRUM Word List','DRUM Medical 2008'])assert.ok(knowledge.records.some(r=>r.sourceLabel===label));

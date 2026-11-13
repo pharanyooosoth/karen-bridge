@@ -33,8 +33,8 @@
    <details class="reference-panel"><summary>เพิ่มบริบทและคำศัพท์อ้างอิง (ถ้ามี)</summary><label for="sentence-dialect">สำเนียง / พื้นที่</label><input id="sentence-dialect" maxlength="300" value="ปกาเกอะญอ / กะเหรี่ยงสะกอในประเทศไทย"><label for="sentence-reference">บริบทหรือคำแปลที่ทราบ</label><textarea id="sentence-reference" maxlength="6000" rows="4" placeholder="เช่น ผู้พูดคุยกับเพื่อน หรือคำศัพท์ที่เจ้าของภาษายืนยัน พร้อมที่มา"></textarea><p class="small">ข้อมูลนี้ใช้ช่วยแปล ไม่ได้บันทึกเป็นฐานข้อมูลถาวร</p></details>
    <div class="image-access"><label for="sentence-access">รหัสเข้าใช้บริการ AI สำหรับแปลประโยค</label><input id="sentence-access" type="password" autocomplete="off" maxlength="256" placeholder="รหัสเดิมที่ใช้แปลภาพ ไม่ใช่ API key"></div>
    <label class="image-consent"><input id="sentence-consent" type="checkbox"><span>ฉันยินยอมส่งประโยคและบริบทที่กรอกไปยังเซิร์ฟเวอร์ของเว็บและ OpenAI เมื่อกดแปล</span></label>
-   <button id="sentence-submit" class="primary" type="submit" disabled>ค้นบทเรียน / แปลด้วย AI <span>↗</span></button>
-   <p class="small">รายการตรงบทเรียนค้นในเครื่องได้ทันที หากไม่พบจึงใช้รหัสและโควตา OpenAI API ไม่บันทึกประโยค ผลแปล หรือรหัสเข้าใช้เป็นประวัติในเว็บ</p>
+   <button id="sentence-submit" class="primary" type="submit" disabled>ค้นฐานกลาง / แปลด้วย AI <span>↗</span></button>
+   <p class="small">รายการตรงฐานข้อมูลกลางค้นในเครื่องได้ทันที หากไม่พบจึงใช้รหัสและโควตา OpenAI API ไม่บันทึกประโยค ผลแปล หรือรหัสเข้าใช้เป็นประวัติในเว็บ</p>
   </section>
   <section class="image-panel"><h2>คำแปลทั้งประโยค</h2><div id="sentence-result" aria-live="polite"></div><button id="sentence-copy" type="button" class="quiet" disabled>คัดลอกคำแปล</button></section>
  </div></form>
@@ -73,7 +73,7 @@
   </section>
  </div>
  <div class="image-progress"><p id="image-status" role="status" aria-live="polite"></p><button id="image-cancel" class="quiet" hidden>ยกเลิกการรอผล</button></div>
- <p class="small">ผลจาก AI เป็นร่างที่ยังไม่ได้ตรวจโดยเจ้าของภาษา แยกจากคำอ้างอิงในพจนานุกรม · การอ่านภาพและแปลเป็นคนละคำขอ API</p>
+ <p class="small">ผลจาก AI เป็นร่างที่ยังไม่ได้ตรวจโดยเจ้าของภาษา แยกจากคำอ้างอิงในพจนานุกรม · การอ่านภาพใช้ API; ข้อความที่ตรวจแล้วจะค้นฐานกลางก่อน ถ้าไม่พบจึงเรียก API</p>
 </section>
 
 <section id="view-saved" class="view" hidden><p class="eyebrow">YOUR WORD COLLECTION</p><h1>คำที่บันทึกไว้</h1><p class="intro">ทบทวนคำที่อยากจำ ข้อมูลเก็บในเบราว์เซอร์เครื่องนี้</p><button id="export-saved" class="secondary">ดาวน์โหลดคำที่บันทึก (JSON)</button><div id="saved-list" class="saved-grid"></div></section>
