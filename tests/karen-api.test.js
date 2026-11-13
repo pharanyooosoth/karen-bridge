@@ -89,3 +89,28 @@ test('unrelated text-reference rows cannot supply a reading for the target',asyn
 test('OCR dotted-circle substitutions are rejected as unreadable',()=>{
  assert.throws(()=>parseModelResponse(model({text:'◌ျး',language:'unclear',thai_reading:'',reading_basis:'unavailable',reading_quote:'',uncertain_spans:[],notes:[]}),'ocr'));
 });
+test('sentence translation forwards complete text, context and all six supported language directions',async()=>{
+ for(const [sourceLanguage,target] of [['thai','sgaw_karen'],['english','sgaw_karen'],['sgaw_karen','th'],['sgaw_karen','en'],['thai','en'],['english','th']]){
+  let sent;const handle=createKarenHandler({fetchImpl:async(url,options)=>{sent=JSON.parse(options.body);return Response.json(model({...answer,translation:'draft sentence'}));}});
+  const payload={action:'sentence',text:'Full sentence.\nSecond sentence.',sourceLanguage,target,dialect:'Thailand Sgaw',referenceText:'Context from user'};
+  const response=await handle(request(payload),env);assert.equal(response.status,200);assert.equal((await response.json()).data.translation,'draft sentence');
+  const context=JSON.parse(sent.input[0].content[0].text);assert.equal(context.source_text,payload.text);assert.equal(context.source_language_hint,sourceLanguage);assert.equal(context.target_language,{sgaw_karen:'Sgaw Karen',th:'Thai',en:'English'}[target]);assert.equal(context.reference_text,payload.referenceText);assert.equal(sent.store,false);assert.equal(sent.text.format.name,'karen_sentence');assert.match(sent.instructions,/translate them as text/);
+ }
+});
+test('sentence language errors, same-language and images are rejected before paid call',async()=>{
+ let calls=0;const handle=createKarenHandler({fetchImpl:async()=>{calls++;return Response.json(model(answer));}});
+ const payload={action:'sentence',text:'Hello',sourceLanguage:'english',target:'sgaw_karen'};
+ for(const edit of [{sourceLanguage:'auto'},{sourceLanguage:'burmese'},{target:'pwo_karen'},{target:'en'},{target:undefined},{image:'data:image/png;base64,iVBORw0KGgo='},{text:' '},{text:'x'.repeat(6001)}])assert.equal((await handle(request({...payload,...edit}),env)).status,400);
+ assert.equal(calls,0);
+ const health=await (await handle(new Request('https://example.com/api/karen'),env)).json();assert.ok(health.features.includes('sentence-translation'));
+});
+test('sentence Thai reading is grounded in translated Karen, never in original Thai meaning',async()=>{
+ const handle=createKarenHandler({fetchImpl:async()=>Response.json(model({...answer,translation:'တၢ်ဘျုး',thai_reading:'ขอบคุณ'}))});
+ const response=await handle(request({action:'sentence',text:'Thank you',sourceLanguage:'english',target:'sgaw_karen'}),env);const data=(await response.json()).data;
+ assert.equal(data.thai_reading,'ตาบลึ / ตะบลือ');assert.equal(data.reading_basis,'dictionary');
+});
+test('Thai-English sentence translations do not display a spurious Karen reading',async()=>{
+ const handle=createKarenHandler({fetchImpl:async()=>Response.json(model({...answer,reading_basis:'provided_reference',reading_quote:'irrelevant'}))});
+ const response=await handle(request({action:'sentence',text:'Thank you',sourceLanguage:'english',target:'th'}),env);const data=(await response.json()).data;
+ assert.equal(data.thai_reading,'');assert.equal(data.reading_quote,'');assert.equal(data.reading_basis,'unavailable');
+});

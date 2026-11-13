@@ -75,3 +75,8 @@ npm run build
 ## License
 
 โค้ด MIT; ข้อมูลพจนานุกรมและร่างแปล CC BY-SA 4.0; เสียงตามใบอนุญาตรายไฟล์ ดู ATTRIBUTION.md
+# Sentence translation (v1.5)
+
+The new sentence menu translates complete text between Thai, English and Sgaw Karen (all six directions, up to 6,000 characters). It uses the existing Vercel API configuration and access code. Users choose languages, optionally add context, consent to sending text, and translate. Results remain drafts; Karen pronunciation still requires reference evidence. Swap, copy and cancel controls are included. No sentence history or access code is saved.
+
+Uses the [OpenAI Responses API](https://developers.openai.com/api/docs/guides/text), action `sentence`. The backend must advertise `sentence-translation` (API version 3). No new environment variables or model change is required.

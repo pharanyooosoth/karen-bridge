@@ -1,6 +1,7 @@
 import {buildIndex,search,segmentKaren} from './engine.js';
 import {thaiReading} from './thai-reading.js';
 import {initImageTranslation} from './image-translate.js';
+import {initSentenceTranslation} from './sentence-translate.js';
 const $=id=>document.getElementById(id);
 let data,index,limit=40,currentView='translate',recognition=null,playing=null;
 const KEY='karen-bridge:saved:v1';
@@ -79,3 +80,5 @@ updateCount();updateLanguage();view('translate');
 try{const response=await fetch('./data/dictionary.json');if(!response.ok)throw new Error('dictionary unavailable');data=await response.json();index=buildIndex(data.entries);$('word-stat').textContent=data.meta.words.toLocaleString('en');$('thai-stat').textContent=data.meta.thaiEntries.toLocaleString('en');$('audio-stat').textContent=data.meta.audioFiles;render();}catch{$('result-summary').textContent='โหลดพจนานุกรมไม่ได้ กรุณารีโหลดหน้าเว็บ หรือตรวจการเชื่อมต่อ';$('search').disabled=true;}
 
 initImageTranslation({onDictionaryLookup(text){$('language').value='ksw';$('query').value=text.slice(0,500);$('audio-only').checked=false;view('translate');updateLanguage();if(text.length>500)toast('นำข้อความ 500 ตัวอักษรแรกมาค้นพจนานุกรม');}});
+
+initSentenceTranslation();
