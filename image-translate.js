@@ -1,3 +1,4 @@
+import {loadKnowledgeBase,localTextResult} from './knowledge-base.js';
 // Images stay local until an explicit request. Only reference notes can be saved locally.
 const INPUT_LIMIT=10*1024*1024,OUTPUT_LIMIT=1.25*1024*1024,MAX_SIDE=2200,MAX_TEXT=6000;
 const $=id=>document.getElementById(id);
@@ -23,14 +24,14 @@ export async function prepareImage(file){
  }finally{URL.revokeObjectURL(url);}
 }
 export function initImageTranslation({onDictionaryLookup}){
- let endpoint=null,ready=false,image=null,referenceImage=null,busy=false,controller=null,revision=0,translated=null;
+ let endpoint=null,ready=false,image=null,referenceImage=null,busy=false,controller=null,revision=0,translated=null,knowledge=null;
  const preparing={target:false,reference:false},tokens={target:0,reference:0};
  const status=message=>$('image-status').textContent=message;
  function clearTranslation(){translated=null;$('ai-result').replaceChildren();$('ai-copy').disabled=true;$('ai-download').disabled=true;}
  function update(){
   const loading=preparing.target||preparing.reference;
   $('ocr-start').disabled=!ready||!image||busy||loading;
-  $('ai-translate').disabled=!ready||!$('ocr-text').value.trim()||busy||loading;
+  $('ai-translate').disabled=(!ready&&!knowledge)||!$('ocr-text').value.trim()||busy||loading;
   $('image-cancel').hidden=!busy;$('image-target').disabled=busy||$('image-mode').value==='reading';
   $('ai-translate').textContent=$('image-mode').value==='reading'?'หาคำอ่านจากหลักฐาน ↗':'แปลข้อความพร้อมคำอ่าน ↗';
   $('ocr-text-count').textContent=`${$('ocr-text').value.length.toLocaleString('en')} / 6,000`;
@@ -43,9 +44,9 @@ export function initImageTranslation({onDictionaryLookup}){
  function showReading(container,data){
   container.append(node('h3','','คำอ่านภาษาไทย'));
   container.append(node('p','ai-reading',data.thai_reading||'ยังระบุคำอ่านจากหลักฐานไม่ได้'));
-  const basis={dictionary:'จากพจนานุกรมโครงการ · คำอ่านโดยประมาณ ยังไม่ยืนยันสำเนียง',provided_reference:'AI เทียบกับข้อมูลอ้างอิง · ต้องตรวจว่าเป็นแถวเดียวกับต้นฉบับ',unavailable:'ไม่สร้างคำอ่านเดาเมื่อหลักฐานไม่พอ'};
+  const basis={course_roman_approximation:'จากโรมัน KTWG · โดยประมาณ',drum_approximation:'จากฐาน DRUM · คำอ่านทดลอง',dictionary:'จากพจนานุกรมโครงการ · คำอ่านโดยประมาณ ยังไม่ยืนยันสำเนียง',provided_reference:'AI เทียบกับข้อมูลอ้างอิง · ต้องตรวจว่าเป็นแถวเดียวกับต้นฉบับ',unavailable:'ไม่สร้างคำอ่านเดาเมื่อหลักฐานไม่พอ'};
   container.append(node('p','small',basis[data.reading_basis]||basis.unavailable));
-  if(data.reading_quote)container.append(node('p','small','หลักฐานที่ AI ใช้: '+data.reading_quote));
+  if(data.reading_quote)container.append(node('p','small','ข้อความอ้างอิง: '+data.reading_quote));
  }
  async function selectFile(file,kind='target'){
   if(kind==='target')resetImage();else clearReference();if(!file)return;
@@ -60,24 +61,30 @@ export function initImageTranslation({onDictionaryLookup}){
   finally{if(token===tokens[kind]){preparing[kind]=false;update();}}
  }
  async function submit(action){
-  if(!ready||!endpoint){status('บริการ AI ยังไม่พร้อม');return;}
-  if(!$('image-consent').checked){status('โปรดยืนยันการส่งภาพต้นทาง ภาพอ้างอิง และข้อความที่กรอกไปให้ OpenAI');$('image-consent').focus();return;}
-  const access=$('image-access-code').value;
-  if(!access){status('กรุณาใส่รหัสเข้าใช้ที่ได้รับจากเจ้าของเว็บไซต์');$('image-access-code').focus();return;}
+  if(busy)return;
   if(action==='ocr'&&!image)return;
   const text=$('ocr-text').value.trim();if(action!=='ocr'&&(!text||text.length>MAX_TEXT)){status('กรุณาตรวจข้อความ ไม่เกิน 6,000 ตัวอักษร');return;}
-  const payload={action,sourceLanguage:$('image-source-language').value,dialect:$('image-dialect').value,referenceText:$('reference-text').value};
-  if(image)payload.image=image;if(referenceImage)payload.referenceImage=referenceImage;
   const target=$('image-target').value;
-  if(action!=='ocr')Object.assign(payload,{text,target});
+  const payload={action,text,target,sourceLanguage:$('image-source-language').value,dialect:$('image-dialect').value,referenceText:$('reference-text').value};
+  if(image)payload.image=image;if(referenceImage)payload.referenceImage=referenceImage;
+  const direct=knowledge&&action!=='ocr'?localTextResult(knowledge,payload):null;
+  const access=$('image-access-code').value;
+  if(!direct){
+   if(!ready||!endpoint){status('ไม่พบคำตอบตรงในฐานข้อมูลกลาง และบริการ AI ยังไม่พร้อม');return;}
+   if(!$('image-consent').checked){status('โปรดยืนยันการส่งภาพและข้อความให้ OpenAI');$('image-consent').focus();return;}
+   if(!access){status('กรุณาใส่รหัสเข้าใช้บริการ AI');$('image-access-code').focus();return;}
+  }
   invalidate();const version=revision;controller=new AbortController();const currentController=controller;busy=true;update();
   status(action==='ocr'?'กำลังอ่านภาพโดยเทียบภาษาและข้อมูลอ้างอิง…':action==='reading'?'กำลังหาคำอ่านจากหลักฐาน…':'กำลังแปลข้อความที่ตรวจแล้ว…');
   const timeout=setTimeout(()=>currentController.abort(),65000);
   try{
-   const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','X-Karen-Access-Code':access},body:JSON.stringify(payload),signal:currentController.signal,credentials:'omit',redirect:'error'});
-   let result;try{result=await response.json();}catch{throw Error('บริการส่งคำตอบไม่ถูกต้อง กรุณาติดต่อเจ้าของเว็บไซต์');}
-   if(version!==revision)return;
-   if(!response.ok)throw Error(typeof result.error==='string'?result.error:'บริการ AI ไม่สำเร็จ');
+   let result=direct;
+   if(!result){
+    const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','X-Karen-Access-Code':access},body:JSON.stringify(payload),signal:currentController.signal,credentials:'omit',redirect:'error'});
+    try{result=await response.json();}catch{throw Error('บริการส่งคำตอบไม่ถูกต้อง');}
+    if(version!==revision)return;
+    if(!response.ok)throw Error(typeof result.error==='string'?result.error:'บริการ AI ไม่สำเร็จ');
+   }
    const data=result.data;if(!data||typeof data!=='object')throw Error('ไม่พบผลลัพธ์จาก AI');
    if(action==='ocr'){
     if(typeof data.text!=='string'||data.text.length>MAX_TEXT)throw Error('ข้อความยาวเกินกำหนด กรุณาแบ่งภาพ');
@@ -90,12 +97,12 @@ export function initImageTranslation({onDictionaryLookup}){
    }else{
     if(typeof data.translation!=='string'||typeof data.thai_reading!=='string')throw Error('รูปแบบคำตอบไม่ถูกต้อง');
     translated={source:text,target,action,...data};
-    const panel=$('ai-result');panel.replaceChildren(node('span','resource-tag','ผลช่วยอ่าน · ยังไม่ได้ตรวจโดยเจ้าของภาษา'));
+    const panel=$('ai-result');panel.replaceChildren(node('span','resource-tag',direct?'ตรงกับฐานข้อมูลกลาง · ไม่เรียก AI':'ผลช่วยอ่าน · ยังไม่ได้ตรวจโดยเจ้าของภาษา'));
     showReading(panel,data);
     if(action==='translate')panel.append(node('h3','',target==='th'?'คำแปลภาษาไทยฉบับร่าง':'English translation draft'),node('p','ai-translation',data.translation||'ยังแปลส่วนนี้ไม่ได้'));
     notes(panel,data.uncertain_spans?.map(s=>'ไม่แน่ใจ: '+s));notes(panel,data.notes);
-    if(result.references?.length){panel.append(node('h3','','รายการพจนานุกรมที่ส่งให้ API'));for(const ref of result.references){const a=node('a','small',ref.text+' · ที่มา');a.href=ref.source;a.target='_blank';a.rel='noopener noreferrer';panel.append(a,node('br'));}}
-    $('ai-copy').disabled=!(data.thai_reading||data.translation);$('ai-download').disabled=false;status('เสร็จแล้ว — ตรวจคำอ่านและหลักฐานก่อนนำไปใช้');
+    const refs=result.courseReferences?.length?result.courseReferences:result.references;if(refs?.length){panel.append(node('h3','',direct?'แหล่งข้อมูลที่ตรงกัน':'ข้อมูลอ้างอิงที่ส่งให้ AI'));for(const ref of refs){const a=node('a','small',ref.text+' · ที่มา');a.href=ref.source;a.target='_blank';a.rel='noopener noreferrer';panel.append(a,node('br'));}}
+    $('ai-copy').disabled=!(data.thai_reading||data.translation);$('ai-download').disabled=false;status(direct?'พบในฐานข้อมูลกลาง — ไม่ส่งข้อความออกและไม่ใช้โควตา API':'เสร็จแล้ว — ตรวจคำอ่านและหลักฐานก่อนนำไปใช้');
    }
   }catch(error){if(version===revision)status(error.name==='AbortError'?'คำขอหมดเวลาหรือถูกยกเลิก ลองแบ่งภาพ':error.message||'เชื่อมต่อไม่ได้');}
   finally{clearTimeout(timeout);if(version===revision){busy=false;controller=null;update();}}
@@ -126,11 +133,12 @@ export function initImageTranslation({onDictionaryLookup}){
    if(!endpoint)throw Error('ยังไม่ได้เชื่อมต่อบริการ AI — ค้นพจนานุกรมได้');
    const response=await fetch(endpoint,{signal:AbortSignal.timeout(10000),credentials:'omit',redirect:'error',cache:'no-store'});
    if(!response.ok)throw Error('เชื่อมต่อบริการ AI ไม่ได้ กรุณาตรวจ URL และ ALLOWED_ORIGINS');
-   const health=await response.json();ready=health.ready===true&&health.apiVersion>=2;
-   $('image-service-status').textContent=health.apiVersion<2||!health.apiVersion?'เซิร์ฟเวอร์ยังเป็นรุ่นเดิม รอ Vercel deploy รุ่นใหม่แล้วกดตรวจอีกครั้ง':ready?'เชื่อมต่อแล้ว · รองรับภาษาต้นทาง ภาพอ้างอิง และโหมดคำอ่าน':'บริการ AI ยังไม่ได้ตั้งค่าคีย์หรือรหัสเข้าใช้';
+   const health=await response.json();ready=health.ready===true&&health.features?.includes('shared-database')===true;
+   $('image-service-status').textContent=!health.features?.includes('shared-database')?'เซิร์ฟเวอร์ยังเป็นรุ่นเดิม รอ Vercel deploy รุ่นใหม่แล้วกดตรวจอีกครั้ง':ready?'เชื่อมต่อแล้ว · รองรับภาษาต้นทาง ภาพอ้างอิง และโหมดคำอ่าน':'บริการ AI ยังไม่ได้ตั้งค่าคีย์หรือรหัสเข้าใช้';
   }catch(error){$('image-service-status').textContent=error.message||'บริการ AI ยังไม่พร้อม';}
   update();
  }
  window.addEventListener('pagehide',()=>{controller?.abort();$('image-access-code').value='';image=null;referenceImage=null;});
  resetImage();checkService();
+ loadKnowledgeBase().then(base=>{knowledge=base;update();}).catch(()=>{status('โหลดฐานข้อมูลกลางไม่ครบ กรุณารีโหลด');});
 }

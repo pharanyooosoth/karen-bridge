@@ -1,9 +1,8 @@
-import {buildIndex,search,segmentKaren} from './engine.js';
+import {search,segmentKaren} from './engine.js';
 import {thaiReading} from './thai-reading.js';
 import {initImageTranslation} from './image-translate.js';
 import {initSentenceTranslation} from './sentence-translate.js';
-import {courseDictionaryEntries} from './course.js';
-import {prepareDrum,drumDictionaryEntries} from './drum.js';
+import {loadKnowledgeBase} from './knowledge-base.js';
 const $=id=>document.getElementById(id);
 let data,index,medicalIndex,medicalLimit=40,limit=40,currentView='translate',recognition=null,playing=null;
 const KEY='karen-bridge:saved:v1';
@@ -94,7 +93,11 @@ $('mic').onclick=()=>{
 };
 window.addEventListener('pagehide',()=>{recognition?.abort();playing?.pause();});
 updateCount();updateLanguage();view('translate');
-try{const response=await fetch('./data/dictionary.json');if(!response.ok)throw new Error('dictionary unavailable');data=await response.json();try{const cr=await fetch("./data/ktwg-course.json");if(!cr.ok)throw Error();const course=await cr.json();data.entries.push(...courseDictionaryEntries(course));data.meta.words=new Set(data.entries.map(e=>e.word)).size;data.meta.thaiEntries=data.entries.filter(e=>e.senses.some(s=>s.th.length)).length;}catch{toast("โหลดบทเรียน KTWG ไม่สำเร็จ ยังค้นพจนานุกรมเดิมได้");}try{const responses=await Promise.all(['general','medical'].map(kind=>fetch(`./data/drum-${kind}.json`)));if(responses.some(r=>!r.ok))throw Error();const [general,medical]=await Promise.all(responses.map(r=>r.json()));const drum=prepareDrum(general,medical);data.entries.push(...drumDictionaryEntries(drum));medicalIndex=buildIndex(data.entries.filter(e=>e.domain==='medical'));$('medical-status').textContent=`DRUM Medical Terms ปี 2008 · ${medicalIndex.length} รายการพร้อมใช้ / ${medical.meta.entryCount} รายการ · ${medical.meta.pageCount} หน้า PDF · 2 รายการพักไว้ตรวจต้นฉบับ`;}catch{$('medical-status').textContent='โหลดฐานศัพท์แพทย์ไม่ได้ กรุณารีโหลด';toast('โหลดฐาน DRUM ไม่สำเร็จ');}data.meta.words=new Set(data.entries.map(e=>e.word)).size;data.meta.thaiEntries=data.entries.filter(e=>e.senses.some(s=>s.th.length)).length;index=buildIndex(data.entries.filter(e=>e.domain!=='medical'));$('word-stat').textContent=data.meta.words.toLocaleString('en');$('thai-stat').textContent=data.meta.thaiEntries.toLocaleString('en');$('audio-stat').textContent=data.meta.audioFiles;render();}catch{$('result-summary').textContent='โหลดพจนานุกรมไม่ได้ กรุณารีโหลดหน้าเว็บ หรือตรวจการเชื่อมต่อ';$('search').disabled=true;}
+try{const base=await loadKnowledgeBase();data={entries:base.entries,meta:base.meta};index=base.index;medicalIndex=base.medicalIndex;
+$('medical-status').textContent=`ฐานข้อมูลกลาง · หมวดแพทย์ ${medicalIndex.length} รายการพร้อมใช้ / ${base.meta.medicalEntries} รายการ · ${base.meta.medicalPages} หน้า PDF`;
+$('word-stat').textContent=data.meta.words.toLocaleString('en');$('thai-stat').textContent=data.meta.thaiEntries.toLocaleString('en');$('audio-stat').textContent=data.meta.audioFiles;render();
+}catch{$('result-summary').textContent='โหลดฐานข้อมูลกลางไม่ครบ กรุณารีโหลดหน้าเว็บ';$('medical-status').textContent='โหลดฐานข้อมูลกลางไม่ครบ กรุณารีโหลด';$('search').disabled=true;}
+
 
 initImageTranslation({onDictionaryLookup(text){$('language').value='ksw';$('query').value=text.slice(0,500);$('audio-only').checked=false;view('translate');updateLanguage();if(text.length>500)toast('นำข้อความ 500 ตัวอักษรแรกมาค้นพจนานุกรม');}});
 

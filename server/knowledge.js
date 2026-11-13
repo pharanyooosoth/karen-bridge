@@ -1,15 +1,9 @@
 // Shared dictionary data, independent of the account owning the API key.
 import {readFileSync} from 'node:fs';
-import {thaiReading} from '../thai-reading.js';
-import {prepareDrum,drumDictionaryEntries} from '../drum.js';
-export const drum=prepareDrum(...['general','medical'].map(kind=>JSON.parse(readFileSync(new URL(`../data/drum-${kind}.json`,import.meta.url),'utf8'))));
-const entries=JSON.parse(readFileSync(new URL('../data/dictionary.json',import.meta.url),'utf8')).entries.concat(drumDictionaryEntries(drum));
+import {createKnowledgeBase,exactReferences,SOURCE_FILES} from '../knowledge-base.js';
+export const knowledge=createKnowledgeBase(...SOURCE_FILES.map(name=>JSON.parse(readFileSync(new URL(`../data/${name}.json`,import.meta.url),'utf8'))));
 const clean=text=>text.normalize('NFC').replace(/[\u200B-\u200D\uFEFF]/gu,'').trim();
-export function dictionaryReferences(text,language){
- if(language!=='sgaw_karen')return [];
- const lines=new Set(text.split('\n').map(clean).filter(Boolean));
- return entries.filter(e=>lines.has(clean(e.word))).slice(0,12).map(e=>({id:e.id,text:e.word,thai_readings:thaiReading(e).readings,reading_method:thaiReading(e).method,roman:e.roman,meaning_th:e.senses.flatMap(s=>s.th),meaning_en:e.senses.flatMap(s=>s.en),source:e.source}));
-}
+export function dictionaryReferences(text,language){return exactReferences(knowledge,text,language);}
 export function applyReadingEvidence(data,input,references){
  // A whole-text exact lookup is deterministic; never stitch approximate substrings.
  const exact=references.filter(r=>clean(r.text)===clean(input.text||''));

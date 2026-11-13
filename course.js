@@ -5,7 +5,7 @@ export function courseKey(text,language='english'){
  value=value.replace(/[.!?။]+$/u,'').trim();
  return language==='sgaw_karen'?value.replace(/\s+/gu,''):value;
 }
-function values(entry,language){return language==='sgaw_karen'?[entry.word]:language==='thai'?entry.thai:[entry.english];}
+function values(entry,language){return language==='sgaw_karen'?[entry.word]:language==='thai'?entry.thai:[entry.english,...(entry.englishAliases||[])];}
 export function courseMatches(course,text,language){
  const key=courseKey(text,language);if(!key||!['sgaw_karen','thai','english'].includes(language))return [];
  return course.entries.filter(e=>!e.needsReview&&values(e,language).some(s=>courseKey(s,language)===key));
@@ -13,7 +13,7 @@ export function courseMatches(course,text,language){
 export function courseReference(e){return {id:e.id,sourceLabel:e.sourceLabel||'KTWG',domain:e.domain||'course',text:e.word,english:e.english,thai:e.thai,roman:e.roman,page:e.page,sourcePages:e.sourcePages,source:e.source,section:e.section,thai_reading:e.thaiReading?.join(' / ')||'',thai_reading_note:e.thaiReadingNote||'',status:'Source extraction and legacy-font conversion; not native-speaker validated'};}
 export function exactCourseTranslation(course,text,sourceLanguage,target){
  if(({english:'en',thai:'th',sgaw_karen:'sgaw_karen'})[sourceLanguage]===target)return null;
- const matches=courseMatches(course,text,sourceLanguage).filter(e=>target!=='th'||e.thai.length);
+ const matches=courseMatches(course,text,sourceLanguage).filter(e=>target==='th'?e.thai.length:target==='en'?e.english.trim():true);
  if(!matches.length)return null;
  const output=e=>target==='sgaw_karen'?e.word:target==='en'?e.english:e.thai[0];
  // An ambiguous Karen phrase needs context; do not silently choose an English meaning.

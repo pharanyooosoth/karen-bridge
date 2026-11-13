@@ -1,18 +1,17 @@
 import {safeApiUrl} from './image-translate.js';
-import {exactCourseTranslation} from './course.js';
-import {prepareDrum,exactDrumTranslation} from './drum.js';
+import {loadKnowledgeBase,localTextResult} from './knowledge-base.js';
 const labels={sgaw_karen:'ปกาเกอะญอ / กะเหรี่ยงสะกอ',th:'ภาษาไทย',en:'English'};
 const sourceToTarget={sgaw_karen:'sgaw_karen',thai:'th',english:'en'};
 const targetToSource={sgaw_karen:'sgaw_karen',th:'thai',en:'english'};
 const $=id=>document.getElementById(id);
 function node(tag,cls,text){const n=document.createElement(tag);n.className=cls;n.textContent=text;return n;}
 export function initSentenceTranslation(){
- let endpoint=null,ready=false,busy=false,controller=null,revision=0,result=null,healthRevision=0,course=null,drum=null;
+ let endpoint=null,ready=false,busy=false,controller=null,revision=0,result=null,healthRevision=0,knowledge=null;
  const status=text=>$('sentence-status').textContent=text;
  function update(){
   const text=$('sentence-text').value;
   $('sentence-count').textContent=`${text.length.toLocaleString('en')} / 6,000`;
-  $('sentence-submit').disabled=(!ready&&!course&&!drum)||busy||!text.trim();
+  $('sentence-submit').disabled=(!ready&&!knowledge)||busy||!text.trim();
   $('sentence-cancel').hidden=!busy;
   $('sentence-result').setAttribute('aria-busy',String(busy));
   $('sentence-copy').disabled=!result?.translation;
@@ -20,7 +19,7 @@ export function initSentenceTranslation(){
  }
  function invalidate(){revision++;controller?.abort();controller=null;busy=false;result=null;$('sentence-result').replaceChildren(node('p','small','คำแปลทั้งประโยคจะปรากฏที่นี่'));update();}
  function render(data,target,body={}){
-  const panel=$('sentence-result');panel.replaceChildren(node('span','resource-tag',body.provider==='ktwg-course'?'ตรงกับบทเรียน KTWG · ไม่เรียก AI':body.provider==='drum-glossary'?'ตรงกับฐาน DRUM · ไม่เรียก AI':'คำแปลจาก AI · ฉบับร่าง'));
+  const panel=$('sentence-result');panel.replaceChildren(node('span','resource-tag',body.provider!=='openai'?'ตรงกับฐานข้อมูลกลาง · ไม่เรียก AI':'คำแปลจาก AI · ฉบับร่าง'));
   panel.append(node('h3','',labels[target]));
   const translation=node('p','ai-translation',data.translation||'ยังแปลประโยคนี้ไม่ได้ ลองเพิ่มบริบทหรือแบ่งประโยค');translation.lang=target==='sgaw_karen'?'ksw':target;panel.append(translation);
   const karenSide=target==='sgaw_karen'||$('sentence-source').value==='sgaw_karen';
@@ -35,8 +34,8 @@ export function initSentenceTranslation(){
   const notes=[...data.uncertain_spans.map(s=>'ส่วนที่ไม่แน่ใจ: '+s),...data.notes];
   if(notes.length){const list=document.createElement('ul');list.className='ai-notes';for(const text of notes)list.append(node('li','',text));panel.append(list);}
   if(body.courseReferences?.length){
-   panel.append(node('h3','',['ktwg-course','drum-glossary'].includes(body.provider)?'แหล่งข้อมูลที่ตรงกัน':'บทเรียนที่ส่งให้ AI ประกอบ (อาจไม่ครอบคลุมทั้งประโยค)'));
-   const seen=new Set();for(const ref of body.courseReferences){if(seen.has(ref.id))continue;seen.add(ref.id);const a=node('a','course-source',`${ref.sourceLabel||'KTWG'} หน้า ${ref.sourcePages?.join(', ')||ref.page} · ${ref.english}`);a.href=ref.source;a.target='_blank';a.rel='noopener noreferrer';panel.append(a);}
+   panel.append(node('h3','',body.provider!=='openai'?'แหล่งข้อมูลที่ตรงกัน':'บทเรียนที่ส่งให้ AI ประกอบ (อาจไม่ครอบคลุมทั้งประโยค)'));
+   const seen=new Set();for(const ref of body.courseReferences){if(seen.has(ref.id))continue;seen.add(ref.id);const a=node('a','course-source',`${ref.sourceLabel}${ref.page?' หน้า '+(ref.sourcePages?.join(', ')||ref.page):''} · ${ref.english}`);a.href=ref.source;a.target='_blank';a.rel='noopener noreferrer';panel.append(a);}
   }
  }
  async function submit(event){
@@ -44,8 +43,8 @@ export function initSentenceTranslation(){
   const text=$('sentence-text').value.trim(),sourceLanguage=$('sentence-source').value,target=$('sentence-target').value;
   if(!text||text.length>6000){status('กรุณาใส่ประโยคไม่เกิน 6,000 ตัวอักษร');return;}
   if(sourceToTarget[sourceLanguage]===target){status('กรุณาเลือกภาษาต้นทางและปลายทางต่างกัน');return;}
-  const direct=(course&&exactCourseTranslation(course,text,sourceLanguage,target))||(drum&&exactDrumTranslation(drum,text,sourceLanguage,target));
-  if(direct){invalidate();result=direct.data;render(result,target,direct);update();status('พบในฐาน '+(direct.provider==='ktwg-course'?'KTWG':'DRUM')+' — ค้นในเครื่อง ไม่ส่งข้อความออกและไม่ใช้โควตา API');return;}
+  const direct=knowledge&&localTextResult(knowledge,{action:'sentence',text,sourceLanguage,target,referenceText:$('sentence-reference').value});
+  if(direct){invalidate();result=direct.data;render(result,target,direct);update();status('พบในฐานข้อมูลกลาง — ค้นในเครื่อง ไม่ส่งข้อความออกและไม่ใช้โควตา API');return;}
   if(!ready||!endpoint){status('ไม่พบคำแปลตรงตัวในบทเรียน และบริการ AI ยังไม่พร้อม');return;}
   if(!$('sentence-consent').checked){status('โปรดยืนยันการส่งข้อความให้ OpenAI');$('sentence-consent').focus();return;}
   const access=$('sentence-access').value;
@@ -72,8 +71,8 @@ export function initSentenceTranslation(){
    const healthResponse=await fetch(url,{cache:'no-store',credentials:'omit',redirect:'error',signal:AbortSignal.timeout(10000)});
    if(!healthResponse.ok)throw Error('เชื่อมต่อไม่ได้ กรุณาตรวจ URL และ ALLOWED_ORIGINS');
    const health=await healthResponse.json();if(version!==healthRevision)return;
-   endpoint=url;ready=health.ready===true&&health.features?.includes('drum-glossary')===true;
-   $('sentence-service').textContent=!health.ready?'บริการ AI ยังไม่ได้ตั้งค่า':ready?'API พร้อมใช้งาน · ค้นฐาน KTWG และ DRUM ประกอบแล้ว':'เซิร์ฟเวอร์ยังไม่มีฐาน DRUM รออัปเดตแล้วกดตรวจอีกครั้ง';
+   endpoint=url;ready=health.ready===true&&health.features?.includes('shared-database')===true;
+   $('sentence-service').textContent=!health.ready?'บริการ AI ยังไม่ได้ตั้งค่า':ready?'API พร้อมใช้งาน · ใช้ฐานข้อมูลกลางเดียวกับทุกเมนู':'เซิร์ฟเวอร์ยังไม่รองรับฐานข้อมูลกลาง รออัปเดตแล้วกดตรวจอีกครั้ง';
   }catch(error){if(version===healthRevision)$('sentence-service').textContent=error.message||'บริการ AI ยังไม่พร้อม';}
   if(version===healthRevision)update();
  }
@@ -89,6 +88,5 @@ export function initSentenceTranslation(){
  $('sentence-check').onclick=checkService;
  window.addEventListener('pagehide',()=>{controller?.abort();$('sentence-access').value='';});
  invalidate();checkService();
- Promise.all(['general','medical'].map(kind=>fetch(`./data/drum-${kind}.json`).then(r=>{if(!r.ok)throw Error();return r.json();}))).then(([g,m])=>{drum=prepareDrum(g,m);$('sentence-drum-status').textContent=`ฐาน DRUM พร้อมค้น · ${drum.entries.filter(e=>!e.needsReview).length} รายการพร้อมใช้ · ทั่วไปและศัพท์แพทย์`;update();}).catch(()=>{$('sentence-drum-status').textContent='โหลดฐาน DRUM ไม่สำเร็จ กรุณารีโหลด';});
- fetch('./data/ktwg-course.json').then(r=>{if(!r.ok)throw Error();return r.json();}).then(data=>{course=data;$('sentence-course-status').textContent=`ฐาน KTWG พร้อมค้น · ${data.entries.filter(e=>!e.needsReview).length} รายการพร้อมใช้ / ${data.meta.entryCount} รายการ จาก ${data.meta.pageCount} หน้า · รายการตรงตัวไม่ต้องใช้รหัสหรือ API` ;update();}).catch(()=>{$('sentence-course-status').textContent='โหลดฐาน KTWG ไม่สำเร็จ กรุณารีโหลด';});
+ loadKnowledgeBase().then(base=>{knowledge=base;$('sentence-course-status').textContent=`ฐานข้อมูลกลางพร้อมค้น · ${base.meta.entries} รายการ · Wiktionary / KTWG / DRUM`;$('sentence-drum-status').textContent='รวมศัพท์ทั่วไปและศัพท์แพทย์ · รายการตรงตัวไม่ต้องใช้รหัสหรือ API';update();}).catch(()=>{$('sentence-course-status').textContent='โหลดฐานข้อมูลกลางไม่ครบ กรุณารีโหลด';});
 }

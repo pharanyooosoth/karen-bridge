@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {createKarenHandler,parseModelResponse,validateInput,MAX_BODY_BYTES} from '../server/karen-api.js';
 import {safeApiUrl} from '../image-translate.js';
 const env={OPENAI_API_KEY:'test-key-never-real',APP_ACCESS_CODE:'test-access-code-123456',ALLOWED_ORIGINS:'https://example.com'};
-const input={action:'translate',text:'တၢ်ဘျုး',target:'th'};
+// Explicit reference context exercises the paid provider path; exact lookup is tested separately.
+const input={action:'translate',text:'တၢ်ဘျုး',target:'th',referenceText:'Context for provider tests'};
 const answer={translation:'ขอบคุณ',thai_reading:'ตาบลึ',reading_basis:'unavailable',reading_quote:'',uncertain_spans:[],notes:['คำตอบจำลองเพื่อทดสอบระบบ']};
 const model=data=>({status:'completed',output:[{content:[{type:'output_text',text:JSON.stringify(data)}]}]});
 const request=(body=input,headers={})=>new Request('https://api.example.com/api/karen',{method:'POST',headers:{'Content-Type':'application/json','Origin':'https://example.com','X-Karen-Access-Code':env.APP_ACCESS_CODE,...headers},body:JSON.stringify(body)});
@@ -118,7 +119,7 @@ test('KTWG exact sentence is returned from source without invoking OpenAI',async
  let calls=0;const handle=createKarenHandler({fetchImpl:async()=>{calls++;throw Error('must not call');}});
  for(const text of ['What is your name?',"What's your name?",'What’s your name?']){
   const response=await handle(request({action:'sentence',text,sourceLanguage:'english',target:'sgaw_karen'}),env);assert.equal(response.status,200);const body=await response.json();
-  assert.equal(body.provider,'ktwg-course');assert.equal(body.data.translation,'နမံၤဒ်လဲၣ်');assert.equal(body.data.roman,'na mee di leh?');assert.equal(body.courseReferences[0].page,3);assert.equal(body.data.reading_basis,'course_roman_approximation');
+  assert.equal(body.provider,'shared-database');assert.ok(body.courseReferences.some(r=>r.sourceLabel==='DRUM Word List'));assert.equal(body.data.translation,'နမံၤဒ်လဲၣ်');assert.equal(body.data.roman,'na mee di leh?');assert.equal(body.courseReferences[0].page,3);assert.equal(body.data.reading_basis,'course_roman_approximation');
  }
  assert.equal(calls,0);
  assert.equal((await handle(request({action:'sentence',text:'What is your name?',sourceLanguage:'english',target:'sgaw_karen'},{'X-Karen-Access-Code':'wrong'}),env)).status,401);
