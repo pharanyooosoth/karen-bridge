@@ -4,7 +4,7 @@
   "functions": {
     "api/karen.js": {
       "maxDuration": 60,
-      "includeFiles": "data/dictionary.json"
+      "includeFiles": "data/*.json"
     }
   }
 }

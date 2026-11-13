@@ -32,7 +32,13 @@ Original application code is released under the MIT License in `LICENSE`. That l
 
 ## Linked resources
 
-KTWG, DRUM, and SEAlang are linked for reference. Their dictionaries, teaching materials, and audio have not been copied into this repository. Public access alone was not treated as a bulk reuse license.
+DRUM and SEAlang remain external references; their dictionaries and audio are not bundled.
+
+## KTWG course (v1.6)
+
+Copyright remains with Karen Teacher Working Group (KTWG). At the user's explicit request, the supplied **KTWG Karen Language Course v2.pdf** was transformed into `data/ktwg-course.json`: original page text, three-column vocabulary/phrase pairs, source page numbers, roman readings and legacy Karen text. The original file's SHA-256 is recorded in the dataset. Source: https://ktwg.org/wp-content/uploads/karen-language-course/KTWG%20Karen%20Language%20Course%20v2.pdf . No endorsement is implied. The KTWG content is separate from the Wiktionary CC BY-SA and application MIT licenses; neither is asserted to cover this course. Original PDF, audio files and font binaries are not bundled.
+
+The restricted KNU-to-Unicode character mapping is independently implemented using character identities checked against DRUM's converter at https://drumpublications.org/memdic/unicode.php . Its JavaScript is not copied into the project. Converted spellings remain subject to review. Four records with suspicious repeated vowel/medial signs are preserved for audit and excluded from automatic answers. Thai meanings and the approximate Thai reading for the name question are project additions in `data/ktwg-additions.json`; they are not Thai text extracted from the PDF and are labeled accordingly.
 
 ## Approximate Thai reading aids (v1.1)
 

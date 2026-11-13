@@ -106,11 +106,25 @@ test('sentence language errors, same-language and images are rejected before pai
 });
 test('sentence Thai reading is grounded in translated Karen, never in original Thai meaning',async()=>{
  const handle=createKarenHandler({fetchImpl:async()=>Response.json(model({...answer,translation:'တၢ်ဘျုး',thai_reading:'ขอบคุณ'}))});
- const response=await handle(request({action:'sentence',text:'Thank you',sourceLanguage:'english',target:'sgaw_karen'}),env);const data=(await response.json()).data;
+ const response=await handle(request({action:'sentence',text:'Thank you for that',sourceLanguage:'english',target:'sgaw_karen'}),env);const data=(await response.json()).data;
  assert.equal(data.thai_reading,'ตาบลึ / ตะบลือ');assert.equal(data.reading_basis,'dictionary');
 });
 test('Thai-English sentence translations do not display a spurious Karen reading',async()=>{
  const handle=createKarenHandler({fetchImpl:async()=>Response.json(model({...answer,reading_basis:'provided_reference',reading_quote:'irrelevant'}))});
- const response=await handle(request({action:'sentence',text:'Thank you',sourceLanguage:'english',target:'th'}),env);const data=(await response.json()).data;
+ const response=await handle(request({action:'sentence',text:'Thank you for that',sourceLanguage:'english',target:'th'}),env);const data=(await response.json()).data;
  assert.equal(data.thai_reading,'');assert.equal(data.reading_quote,'');assert.equal(data.reading_basis,'unavailable');
+});
+test('KTWG exact sentence is returned from source without invoking OpenAI',async()=>{
+ let calls=0;const handle=createKarenHandler({fetchImpl:async()=>{calls++;throw Error('must not call');}});
+ for(const text of ['What is your name?',"What's your name?",'What’s your name?']){
+  const response=await handle(request({action:'sentence',text,sourceLanguage:'english',target:'sgaw_karen'}),env);assert.equal(response.status,200);const body=await response.json();
+  assert.equal(body.provider,'ktwg-course');assert.equal(body.data.translation,'နမံၤဒ်လဲၣ်');assert.equal(body.data.roman,'na mee di leh?');assert.equal(body.courseReferences[0].page,3);assert.equal(body.data.reading_basis,'course_roman_approximation');
+ }
+ assert.equal(calls,0);
+ assert.equal((await handle(request({action:'sentence',text:'What is your name?',sourceLanguage:'english',target:'sgaw_karen'},{'X-Karen-Access-Code':'wrong'}),env)).status,401);
+});
+test('novel sentence forwards relevant KTWG records with source pages to OpenAI',async()=>{
+ let sent;const handle=createKarenHandler({fetchImpl:async(url,options)=>{sent=JSON.parse(options.body);return Response.json(model(answer));}});
+ const response=await handle(request({action:'sentence',text:'What is your name? Please tell me again.',sourceLanguage:'english',target:'sgaw_karen'}),env);assert.equal(response.status,200);
+ const context=JSON.parse(sent.input[0].content[0].text);assert.ok(context.course_references.some(r=>r.page===3&&r.text==='နမံၤဒ်လဲၣ်'));assert.ok((await response.json()).courseReferences.length>0);
 });

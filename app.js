@@ -2,6 +2,7 @@ import {buildIndex,search,segmentKaren} from './engine.js';
 import {thaiReading} from './thai-reading.js';
 import {initImageTranslation} from './image-translate.js';
 import {initSentenceTranslation} from './sentence-translate.js';
+import {courseDictionaryEntries} from './course.js';
 const $=id=>document.getElementById(id);
 let data,index,limit=40,currentView='translate',recognition=null,playing=null;
 const KEY='karen-bridge:saved:v1';
@@ -23,7 +24,7 @@ function entryCard(entry,matchType){
  thaiBox.append(el('div','thai-reading-label','คำอ่านภาษาไทยโดยประมาณ'));
  if(reading.readings.length){
   thaiBox.append(el('div','thai-reading-text',reading.readings.join(' / ')));
-  thaiBox.append(el('div','thai-reading-note',reading.method==='user-example'?'ตัวอย่างคำอ่านที่ผู้ใช้เสนอ · ยังไม่ได้ตรวจโดยเจ้าของภาษา':'ถอดจากคำอ่านโรมันอัตโนมัติ · ยังไม่ได้ตรวจโดยเจ้าของภาษา'));
+  thaiBox.append(el('div','thai-reading-note',reading.method==='course-roman-approximation'?(entry.thaiReadingNote||'คำอ่านไทยยังไม่มีในบทเรียน'):reading.method==='user-example'?'ตัวอย่างคำอ่านที่ผู้ใช้เสนอ · ยังไม่ได้ตรวจโดยเจ้าของภาษา':'ถอดจากคำอ่านโรมันอัตโนมัติ · ยังไม่ได้ตรวจโดยเจ้าของภาษา'));
   thaiBox.append(el('div','thai-reading-note','เสียงและวรรณยุกต์อาจไม่ตรงกับสำเนียงของคุณ'));
  }else thaiBox.append(el('div','small','ยังไม่มีคำอ่านไทยสำหรับรูปแบบนี้'));
  card.append(thaiBox);
@@ -64,7 +65,7 @@ $('swap').onclick=()=>{const old=$('language').value;if(old==='ksw'){$('language
 $('load-more').onclick=()=>{limit+=40;render();};
 for(const button of document.querySelectorAll('[data-query]'))button.onclick=()=>{$('language').value=button.dataset.language||'th';$('query').value=button.dataset.query;$('audio-only').checked=false;updateLanguage();};
 for(const button of document.querySelectorAll('[data-view]'))button.onclick=()=>view(button.dataset.view);
-$('export-saved').onclick=()=>{const entries=data.entries.filter(e=>saved.includes(e.id));const blob=new Blob([JSON.stringify({license:'CC BY-SA 4.0',attribution:'Wiktionary contributors via Kaikki; Thai drafts and approximate reading aids by Karen Bridge',entries:entries.map(entry=>({...entry,thaiReading:thaiReading(entry)}))},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=el('a');a.href=url;a.download='karen-bridge-saved.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+$('export-saved').onclick=()=>{const entries=data.entries.filter(e=>saved.includes(e.id));const blob=new Blob([JSON.stringify({license:'Mixed sources; see each entry license and source',attribution:'Wiktionary contributors via Kaikki and user-supplied KTWG course; project Thai additions',entries:entries.map(entry=>({...entry,license:entry.coursePage?"KTWG course; original rights retained, not licensed as Wiktionary CC BY-SA":"CC BY-SA 4.0",thaiReading:thaiReading(entry)}))},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=el('a');a.href=url;a.download='karen-bridge-saved.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 $('mic').onclick=()=>{
  if(recognition){recognition.stop();return;}
  const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;if(!Speech)return;
@@ -77,7 +78,7 @@ $('mic').onclick=()=>{
 };
 window.addEventListener('pagehide',()=>{recognition?.abort();playing?.pause();});
 updateCount();updateLanguage();view('translate');
-try{const response=await fetch('./data/dictionary.json');if(!response.ok)throw new Error('dictionary unavailable');data=await response.json();index=buildIndex(data.entries);$('word-stat').textContent=data.meta.words.toLocaleString('en');$('thai-stat').textContent=data.meta.thaiEntries.toLocaleString('en');$('audio-stat').textContent=data.meta.audioFiles;render();}catch{$('result-summary').textContent='โหลดพจนานุกรมไม่ได้ กรุณารีโหลดหน้าเว็บ หรือตรวจการเชื่อมต่อ';$('search').disabled=true;}
+try{const response=await fetch('./data/dictionary.json');if(!response.ok)throw new Error('dictionary unavailable');data=await response.json();try{const cr=await fetch("./data/ktwg-course.json");if(!cr.ok)throw Error();const course=await cr.json();data.entries.push(...courseDictionaryEntries(course));data.meta.words=new Set(data.entries.map(e=>e.word)).size;data.meta.thaiEntries=data.entries.filter(e=>e.senses.some(s=>s.th.length)).length;}catch{toast("โหลดบทเรียน KTWG ไม่สำเร็จ ยังค้นพจนานุกรมเดิมได้");}index=buildIndex(data.entries);$('word-stat').textContent=data.meta.words.toLocaleString('en');$('thai-stat').textContent=data.meta.thaiEntries.toLocaleString('en');$('audio-stat').textContent=data.meta.audioFiles;render();}catch{$('result-summary').textContent='โหลดพจนานุกรมไม่ได้ กรุณารีโหลดหน้าเว็บ หรือตรวจการเชื่อมต่อ';$('search').disabled=true;}
 
 initImageTranslation({onDictionaryLookup(text){$('language').value='ksw';$('query').value=text.slice(0,500);$('audio-only').checked=false;view('translate');updateLanguage();if(text.length>500)toast('นำข้อความ 500 ตัวอักษรแรกมาค้นพจนานุกรม');}});
 

@@ -80,3 +80,11 @@ npm run build
 The new sentence menu translates complete text between Thai, English and Sgaw Karen (all six directions, up to 6,000 characters). It uses the existing Vercel API configuration and access code. Users choose languages, optionally add context, consent to sending text, and translate. Results remain drafts; Karen pronunciation still requires reference evidence. Swap, copy and cancel controls are included. No sentence history or access code is saved.
 
 Uses the [OpenAI Responses API](https://developers.openai.com/api/docs/guides/text), action `sentence`. The backend must advertise `sentence-translation` (API version 3). No new environment variables or model change is required.
+
+## KTWG source-backed translations (v1.6)
+
+The user-supplied KTWG v2 course is now an actual database, not just a link: 28 pages, 455 extracted rows, 451 enabled records and 4 quarantined conversions. `data/ktwg-course.json` retains original page text, legacy encoding, Unicode conversion, roman reading, English and source pages. `scripts/imports/ktwg.py` reproduces the extraction from the source PDF using explicit wrapped-row corrections; its SHA-256 identifies the imported edition. Thai additions are separate in `data/ktwg-additions.json`.
+
+Both word search and sentence translation use the course. Exact sentence matches are returned locally without an access code or OpenAI call; the protected API has the same deterministic path. Other sentences send up to 8 relevant source records to OpenAI and display their source pages. Unrelated references are not proof of a generated translation. The backend advertises `ktwg-course` (API version 4); no environment-variable change is needed.
+
+Acceptance example: `What is your name?`, `What's your name?`, and `What’s your name?` resolve to `နမံၤဒ်လဲၣ်`, roman `na mee di leh?`, KTWG page 3. Thai aliases include `คุณชื่ออะไร`. The Thai reading aid `นา มี ดิ เล` is explicitly a project approximation, not a Thai transcription in the PDF. See `docs/KTWG-IMPORT.md` for limits and audit details.

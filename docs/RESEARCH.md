@@ -11,7 +11,7 @@
 | [Kaikki / Wiktionary](https://kaikki.org/dictionary/S%27gaw%20Karen/index.html) | ข้อมูล `ksw` JSONL ภาษาอังกฤษ พร้อมคำอ่านบางรายการ | ดาวน์โหลดจริง 1,200 รายการ / 1,037 คำเขียน; ทำดัชนีสองทิศทาง พร้อมที่มาทุกรายการ |
 | [Wiktionary copyright](https://en.wiktionary.org/wiki/Wiktionary:Copyrights) | เงื่อนไข CC BY-SA 4.0 ของข้อความ | คงที่มา แยกใบอนุญาตข้อมูลจากโค้ด และระบุการดัดแปลง |
 | [Wikimedia Commons](https://commons.wikimedia.org/) | ไฟล์เสียงในข้อมูล Kaikki | ยืนยัน metadata ของ 2 ไฟล์โดยผู้ใช้ 咽頭べさ, CC BY-SA 4.0; เล่นจากต้นฉบับเมื่อกด |
-| [KTWG](https://ktwg.org/karen-language-resources/) | หลักสูตรภาษาพื้นฐาน 15 หมวด พร้อมเสียง | ลิงก์บทเรียน ไม่คัดลอกชุดเสียงที่ยังไม่ได้ยืนยันสิทธิ์ |
+| [KTWG](https://ktwg.org/karen-language-resources/) | KTWG Karen Language Course v2 ที่ผู้ใช้แนบ: 28 หน้า หัวข้อถึงหมวด 16 | v1.6 นำเข้า 455 รายการ เปิดใช้ 451 และแยก 4 รายการอักษรผิดปกติรอตรวจ; เก็บเลขหน้าและโรมันตามต้นฉบับ ไม่คัดลอกชุดเสียง |
 | [DRUM](https://www.drumpublications.org/download_k.php) | English–Sgaw Karen / Karen–English, PDF, คู่มือถอดเสียง | แหล่งอ้างอิงเพิ่มเติม; หน้า dictionary.php ตอบข้อผิดพลาด PHP ขณะตรวจ |
 | [SEAlang](http://sealang.net/karen/dictionary.htm) | พจนานุกรมที่พัฒนาจาก DRUM | ลิงก์อ้างอิง; เข้าถึงโดยเครื่องมือค้นเว็บไม่สำเร็จ จึงไม่อ้างว่าทดสอบระบบค้นแล้ว |
 | [Online Burma Library](https://www.burmalibrary.org/en/sealang-library-sgaw-karen-dictionary-corpus-bitexts) | คำอธิบายแหล่ง SEAlang / DRUM | ใช้ประกอบการตรวจที่มาของทรัพยากร |

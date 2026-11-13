@@ -42,3 +42,9 @@ Mock-provider tests verify explicit language/dialect/reference forwarding, separ
 2026-11-13: 36 tests pass. Mock-provider tests cover all six language directions, full sentence/newline/context forwarding, invalid/same-language requests rejected before a paid call, Karen-target pronunciation tied to the translation rather than Thai source meaning, and suppressing irrelevant Karen readings for Thai-English. Tests validate software behavior, not Karen sentence accuracy. No API key or access code is available locally for a live provider test.
 
 Browser QA: the local mock successfully rendered a sentence result and missing-reading notice. Swapping languages reused the translation as source and cleared stale results. Production provider accuracy remains unverified.
+
+## KTWG source integration (v1.6)
+
+44 tests pass. The name-question case from the user is covered as an exact source lookup with zero provider calls. Source rows, wrapping, cross-page number 25, Thai aliases, reverse Karen lookup, reference forwarding, 451 searchable entries and 4 quarantined conversions have regression coverage. See KTWG-IMPORT.md.
+
+Browser check: with no configured local API/key, the sentence menu answered What is your name? directly from KTWG page 3, showing the source roman and labeled Thai approximation. The dictionary menu found the same row. Password and consent were left empty, confirming local lookup.

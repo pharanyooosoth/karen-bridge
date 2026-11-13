@@ -1,41 +1,51 @@
 import {safeApiUrl} from './image-translate.js';
+import {exactCourseTranslation} from './course.js';
 const labels={sgaw_karen:'ปกาเกอะญอ / กะเหรี่ยงสะกอ',th:'ภาษาไทย',en:'English'};
 const sourceToTarget={sgaw_karen:'sgaw_karen',thai:'th',english:'en'};
 const targetToSource={sgaw_karen:'sgaw_karen',th:'thai',en:'english'};
 const $=id=>document.getElementById(id);
 function node(tag,cls,text){const n=document.createElement(tag);n.className=cls;n.textContent=text;return n;}
 export function initSentenceTranslation(){
- let endpoint=null,ready=false,busy=false,controller=null,revision=0,result=null,healthRevision=0;
+ let endpoint=null,ready=false,busy=false,controller=null,revision=0,result=null,healthRevision=0,course=null;
  const status=text=>$('sentence-status').textContent=text;
  function update(){
   const text=$('sentence-text').value;
   $('sentence-count').textContent=`${text.length.toLocaleString('en')} / 6,000`;
-  $('sentence-submit').disabled=!ready||busy||!text.trim();
+  $('sentence-submit').disabled=(!ready&&!course)||busy||!text.trim();
   $('sentence-cancel').hidden=!busy;
   $('sentence-result').setAttribute('aria-busy',String(busy));
   $('sentence-copy').disabled=!result?.translation;
   $('sentence-text').lang={thai:'th',english:'en',sgaw_karen:'ksw'}[$('sentence-source').value];
  }
  function invalidate(){revision++;controller?.abort();controller=null;busy=false;result=null;$('sentence-result').replaceChildren(node('p','small','คำแปลทั้งประโยคจะปรากฏที่นี่'));update();}
- function render(data,target){
-  const panel=$('sentence-result');panel.replaceChildren(node('span','resource-tag','คำแปลจาก AI · ฉบับร่าง'));
+ function render(data,target,body={}){
+  const panel=$('sentence-result');panel.replaceChildren(node('span','resource-tag',body.provider==='ktwg-course'?'ตรงกับบทเรียน KTWG · ไม่เรียก AI':'คำแปลจาก AI · ฉบับร่าง'));
   panel.append(node('h3','',labels[target]));
   const translation=node('p','ai-translation',data.translation||'ยังแปลประโยคนี้ไม่ได้ ลองเพิ่มบริบทหรือแบ่งประโยค');translation.lang=target==='sgaw_karen'?'ksw':target;panel.append(translation);
   const karenSide=target==='sgaw_karen'||$('sentence-source').value==='sgaw_karen';
+  if(data.roman&&karenSide)panel.append(node('p','roman','คำอ่านโรมันตามบทเรียน: '+data.roman));
+  if(data.alternatives?.length){panel.append(node('h3','','รูปแบบอื่นที่พบในบทเรียน'));for(const alternative of data.alternatives)panel.append(node('p','ai-translation',alternative));}
   if(karenSide){
    panel.append(node('h3','',target==='sgaw_karen'?'คำอ่านไทยของคำแปลกะเหรี่ยง':'คำอ่านไทยของต้นฉบับกะเหรี่ยง'));
    panel.append(node('p','ai-reading',data.thai_reading||'ยังไม่มีหลักฐานคำอ่านไทยสำหรับประโยคนี้'));
-   if(data.thai_reading)panel.append(node('p','small',data.reading_basis==='dictionary'?'จากพจนานุกรม · โดยประมาณ ยังไม่ได้ตรวจสำเนียง':'AI เทียบข้อความอ้างอิง · ยังต้องตรวจโดยเจ้าของภาษา'));
+   if(data.thai_reading)panel.append(node('p','small',data.reading_basis==='course_roman_approximation'?'โครงการถอดจากโรมันโดยประมาณ · ไม่ใช่คำอ่านไทยใน PDF':data.reading_basis==='dictionary'?'จากพจนานุกรม · โดยประมาณ ยังไม่ได้ตรวจสำเนียง':'AI เทียบข้อความอ้างอิง · ยังต้องตรวจโดยเจ้าของภาษา'));
    if(data.reading_quote)panel.append(node('p','small','ข้อความอ้างอิง: '+data.reading_quote));
   }
   const notes=[...data.uncertain_spans.map(s=>'ส่วนที่ไม่แน่ใจ: '+s),...data.notes];
   if(notes.length){const list=document.createElement('ul');list.className='ai-notes';for(const text of notes)list.append(node('li','',text));panel.append(list);}
+  if(body.courseReferences?.length){
+   panel.append(node('h3','',body.provider==='ktwg-course'?'แหล่งบทเรียนที่ตรงกัน':'บทเรียนที่ส่งให้ AI ประกอบ (อาจไม่ครอบคลุมทั้งประโยค)'));
+   const seen=new Set();for(const ref of body.courseReferences){if(seen.has(ref.id))continue;seen.add(ref.id);const a=node('a','course-source',`KTWG หน้า ${ref.sourcePages?.join(', ')||ref.page} · ${ref.english}`);a.href=ref.source;a.target='_blank';a.rel='noopener noreferrer';panel.append(a);}
+  }
  }
  async function submit(event){
-  event.preventDefault();if(busy||!ready||!endpoint)return;
+  event.preventDefault();if(busy)return;
   const text=$('sentence-text').value.trim(),sourceLanguage=$('sentence-source').value,target=$('sentence-target').value;
   if(!text||text.length>6000){status('กรุณาใส่ประโยคไม่เกิน 6,000 ตัวอักษร');return;}
   if(sourceToTarget[sourceLanguage]===target){status('กรุณาเลือกภาษาต้นทางและปลายทางต่างกัน');return;}
+  const direct=course&&exactCourseTranslation(course,text,sourceLanguage,target);
+  if(direct){invalidate();result=direct.data;render(result,target,direct);update();status('พบในบทเรียน KTWG — ค้นในเครื่อง ไม่ส่งข้อความออกและไม่ใช้โควตา API');return;}
+  if(!ready||!endpoint){status('ไม่พบคำแปลตรงตัวในบทเรียน และบริการ AI ยังไม่พร้อม');return;}
   if(!$('sentence-consent').checked){status('โปรดยืนยันการส่งข้อความให้ OpenAI');$('sentence-consent').focus();return;}
   const access=$('sentence-access').value;
   if(!access){status('กรุณาใส่รหัสเข้าใช้บริการ AI เดิมของคุณ');$('sentence-access').focus();return;}
@@ -49,7 +59,7 @@ export function initSentenceTranslation(){
    if(!response.ok)throw Error(typeof body.error==='string'?body.error:'แปลไม่สำเร็จ กรุณาลองใหม่');
    const data=body.data;
    if(!data||typeof data.translation!=='string'||typeof data.thai_reading!=='string'||!Array.isArray(data.notes)||!Array.isArray(data.uncertain_spans))throw Error('รูปแบบคำตอบไม่ถูกต้อง');
-   result=data;render(data,target);status('แปลแล้ว — ตรวจความหมายและส่วนที่ไม่แน่ใจก่อนใช้');
+   result=data;render(data,target,body);status('แปลแล้ว — ตรวจความหมายและส่วนที่ไม่แน่ใจก่อนใช้');
   }catch(error){if(version===revision)status(error.name==='AbortError'?'หมดเวลารอผล กรุณาลองใหม่หรือแบ่งประโยค':error.message||'เชื่อมต่อไม่ได้');}
   finally{clearTimeout(timeout);if(version===revision){busy=false;controller=null;update();}}
  }
@@ -61,8 +71,8 @@ export function initSentenceTranslation(){
    const healthResponse=await fetch(url,{cache:'no-store',credentials:'omit',redirect:'error',signal:AbortSignal.timeout(10000)});
    if(!healthResponse.ok)throw Error('เชื่อมต่อไม่ได้ กรุณาตรวจ URL และ ALLOWED_ORIGINS');
    const health=await healthResponse.json();if(version!==healthRevision)return;
-   endpoint=url;ready=health.ready===true&&health.features?.includes('sentence-translation')===true;
-   $('sentence-service').textContent=!health.ready?'บริการ AI ยังไม่ได้ตั้งค่า':ready?'พร้อมแปลประโยค · ใช้รหัสเข้าใช้บริการ AI เดิม':'เซิร์ฟเวอร์ยังไม่รองรับแปลประโยค รออัปเดตแล้วกดตรวจอีกครั้ง';
+   endpoint=url;ready=health.ready===true&&health.features?.includes('ktwg-course')===true;
+   $('sentence-service').textContent=!health.ready?'บริการ AI ยังไม่ได้ตั้งค่า':ready?'API พร้อมใช้งาน · ค้นบทเรียน KTWG ประกอบแล้ว':'เซิร์ฟเวอร์ยังไม่มีฐาน KTWG รออัปเดตแล้วกดตรวจอีกครั้ง';
   }catch(error){if(version===healthRevision)$('sentence-service').textContent=error.message||'บริการ AI ยังไม่พร้อม';}
   if(version===healthRevision)update();
  }
@@ -78,4 +88,5 @@ export function initSentenceTranslation(){
  $('sentence-check').onclick=checkService;
  window.addEventListener('pagehide',()=>{controller?.abort();$('sentence-access').value='';});
  invalidate();checkService();
+ fetch('./data/ktwg-course.json').then(r=>{if(!r.ok)throw Error();return r.json();}).then(data=>{course=data;$('sentence-course-status').textContent=`ฐาน KTWG พร้อมค้น · ${data.entries.filter(e=>!e.needsReview).length} รายการพร้อมใช้ / ${data.meta.entryCount} รายการ จาก ${data.meta.pageCount} หน้า · รายการตรงตัวไม่ต้องใช้รหัสหรือ API` ;update();}).catch(()=>{$('sentence-course-status').textContent='โหลดฐาน KTWG ไม่สำเร็จ กรุณารีโหลด';});
 }
